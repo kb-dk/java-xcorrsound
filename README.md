@@ -5,20 +5,21 @@ Clone the repository and fix the names and namespacing to get the basic structur
 Change upstream and push your code to the new repository.
 
 Repository includes:
-* Maven pom.xml 
 * Default java project structure
-* Maven assembly plugin setup to produce default tar-ball structure
 * Simple hello world unit test
+* Maven pom.xml
+* Maven assembly plugin setup to produce default tar-ball structure
+* Jenkinsfile for OpenShift
 
-## Howto get going
+## How to get going
 To get started on your new application start by the following steps:
-* Clone the repository
-* Create a new git repository
-* Update the cloned git repository to reflect the new upstream git repository (git remote set-url origin new.git.url/here)
+* Create a new empty git repository and clone it locally
+* In the project folder, run the following command to get the template files
+`git archive --format=tar --remote=ssh://git@sbprojects.statsbiblioteket.dk:7999/ark/stand-alone-java-template.git master | tar -x`
 * In pom.xml:
     * Update groupId and artitifactId to reflect your new project
     * Update scm section to reflect new git repository
 * Update the java code to reflect your new applications namespace
-* Update application env (src/main/conf/appEnv.sh) to mention the applications main-class, and name of config-file (if changed) 
-* Update standard logback configuration (src/main/conf/logback.xml) to create a logfile with a suitable name for the new application
-* Commit changes to the repository
+* Update application env (`src/main/conf/appEnv.sh`) to mention the applications main-class, and name of config-file (if changed) 
+* Update standard logback configuration (`src/main/conf/logback.xml`) to create a logfile with a suitable name for the new application
+* Commit & push changes to the repository
