@@ -39,10 +39,10 @@ openshift.withCluster() { // Use "default" cluster or fallback to OpenShift clus
                 stage('Push to Nexus (if Master)') {
                     sh 'env'
                     echo "Branch name ${env.BRANCH_NAME}"
-                    if ("${env.BRANCH_NAME}" == 'master') {
-	                sh "${mvnCmd} deploy -DskipTests=true"
+                    if ("${env.BRANCH_NAME}".equals('master')) {
+	                    sh "${mvnCmd} deploy -DskipTests=true"
                     } else {
-	                echo "Branch ${env.BRANCH_NAME} is not master, so no mvn deploy"
+	                    echo "Branch ${env.BRANCH_NAME} is not master, so no mvn deploy"
                     }
                 }
             }
