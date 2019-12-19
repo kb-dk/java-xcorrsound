@@ -11,6 +11,11 @@ Repository includes:
 * Maven assembly plugin setup to produce default tar-ball structure
 * Jenkinsfile for OpenShift
 
+## Tests
+Unit tests are run using the surefire plugin (configured in the parent pom). 
+If you have unit tests that takes long to run, and don't want them to run when at every invocation of mvn package, annotate the testcase with `@Tag("slow")` in the java code. 
+To run all unit tests including the ones tagged as slow, enable the `allTests` maven profile: e.g. `mvn clean package -PallTests`.
+
 ## How to get going
 To get started on your new application start by the following steps:
 * Create a new empty git repository and clone it locally
