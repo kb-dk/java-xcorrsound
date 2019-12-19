@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.sbforge</groupId>
     <artifactId>sbforge-parent</artifactId>
-    <version>21</version>
+    <version>22-SNAPSHOT</version>
   </parent>
 
   <groupId>dk.kb.template</groupId>
@@ -33,7 +33,7 @@
   </repositories>
 
   <properties>
-    <test.groups>fast</test.groups>
+    <test.excludedGroups>slow</test.excludedGroups>
     <!-- Specify java version here, to support forbiddenapis plugin -->
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
@@ -42,15 +42,6 @@
          to disable forbidden APIs check -->
     <api.check.phase>process-classes</api.check.phase>
   </properties>
-
-  <profiles>
-    <profile>
-      <id>allTests</id>
-      <properties>
-        <test.groups>fast,slow</test.groups>
-      </properties>
-    </profile>
-  </profiles>
 
   <dependencies>
     <dependency>
@@ -94,12 +85,6 @@
             <phase>package</phase>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <groups>${test.groups}</groups>
-        </configuration>
       </plugin>
     </plugins>
   </build>
