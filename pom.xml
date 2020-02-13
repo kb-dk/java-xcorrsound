@@ -39,7 +39,7 @@
     <!-- Replace the line below with
          <api.check.phase>none</api.check.phase>
          to disable forbidden APIs check -->
-    <api.check.phase>process-classes</api.check.phase>
+    <api.check.phase>process-test-classes</api.check.phase>
   </properties>
 
   <dependencies>
