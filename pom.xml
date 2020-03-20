@@ -46,7 +46,7 @@
     <dependency>
       <groupId>dk.kb.util</groupId>
       <artifactId>kb-util</artifactId>
-      <version>0.1-SNAPSHOT</version>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
