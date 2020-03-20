@@ -36,6 +36,14 @@ openshift.withCluster() { // Use "default" cluster or fallback to OpenShift clus
                     sh "${mvnCmd} -PallTests clean package"
                 }
 
+                stage('Analyze build results') {
+                    recordIssues aggregatingResults: true,
+                        tools: [java(),
+                                javaDoc(),
+                                mavenConsole(),
+                                taskScanner(highTags:'FIXME', normalTags:'TODO', includePattern: '**/*.java', excludePattern: 'target/**/*')]
+                }
+
                 stage('Push to Nexus (if Master)') {
                     sh 'env'
                     echo "Branch name ${env.BRANCH_NAME}"
