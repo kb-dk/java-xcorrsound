@@ -9,7 +9,8 @@ public class TemplateMain {
 
     public static void main(String[] args) throws IOException {
         HelloWorld helloWorld = new HelloWorld();
-        
+
+        // When debugging from IDEA, add -Ddk.kb.applicationConfig=src/main/conf/templateConfig.yaml to "VM options"
         String applicationConfig = System.getProperty("dk.kb.applicationConfig");
         System.out.println("Application config can be found in: '" + applicationConfig + "'");
         
