@@ -11,7 +11,7 @@ openshift.withCluster() { // Use "default" cluster or fallback to OpenShift clus
             inheritFrom: 'kb-jenkins-agent-java-11',
             cloud: 'openshift', //cloud must be openshift
             label: 'agent-with-settings.xml',
-            name: 'agent--with-settings.xml',
+            name: 'agent-with-settings.xml',
             volumes: [ //mount the settings.xml
                        secretVolume(mountPath: '/etc/m2', secretName: 'maven-settings')
             ]) {
