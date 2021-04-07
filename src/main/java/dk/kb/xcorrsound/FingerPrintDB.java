@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -62,7 +63,7 @@ public class FingerPrintDB implements AutoCloseable {
         String mapFile = getMapFile(filename);
         FileUtils.touch(new File(mapFile));
         
-        try (BufferedReader fin = new BufferedReader(new InputStreamReader(new FileInputStream(mapFile)))) {
+        try (BufferedReader fin = new BufferedReader(new InputStreamReader(new FileInputStream(mapFile),StandardCharsets.UTF_8))) {
             String line = fin.readLine();
             while (line != null) {
                 String[] splits = line.split("\\s+", 2);
@@ -94,7 +95,7 @@ public class FingerPrintDB implements AutoCloseable {
         }
         
         String mapFilename = dbFilename + ".map";
-        try (Writer mof = new OutputStreamWriter(new FileOutputStream(mapFilename, true))) {
+        try (Writer mof = new OutputStreamWriter(new FileOutputStream(mapFilename, true), StandardCharsets.UTF_8)) {
             mof.write("" + end);
             mof.write(" ");
             mof.write(indexedName);
