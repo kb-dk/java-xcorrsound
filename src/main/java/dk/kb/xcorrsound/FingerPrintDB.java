@@ -1,6 +1,7 @@
 package dk.kb.xcorrsound;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +64,8 @@ public class FingerPrintDB implements AutoCloseable {
         String mapFile = getMapFile(filename);
         FileUtils.touch(new File(mapFile));
         
-        try (BufferedReader fin = new BufferedReader(new InputStreamReader(new FileInputStream(mapFile),StandardCharsets.UTF_8))) {
+        try (BufferedReader fin = new BufferedReader(new InputStreamReader(new FileInputStream(mapFile),
+                                                                           StandardCharsets.UTF_8))) {
             String line = fin.readLine();
             while (line != null) {
                 String[] splits = line.split("\\s+", 2);
@@ -83,19 +85,20 @@ public class FingerPrintDB implements AutoCloseable {
         
         long initialSize = Files.size(Path.of(dbFilename));
         long end;
-        try (DataOutputStream of = new DataOutputStream(new FileOutputStream(dbFilename, true))) {
+        try (DataOutputStream of = new DataOutputStream(IOUtils.buffer(new FileOutputStream(dbFilename, true)))) {
             
             for (int i = 0, dbLength = db.length; i < dbLength; i++) {
                 long j = db[i];
-                log.info("db[{}]={}", i, j);
+                log.debug("db[{}]={}", i, j);
                 //Written as LittleEndian
-                of.writeInt(Integer.reverseBytes((int) (j)));
+                of.writeInt(Integer.reverseBytes((int) j));
             }
             end = (of.size() + initialSize) / 4;
         }
         
         String mapFilename = dbFilename + ".map";
-        try (Writer mof = new OutputStreamWriter(new FileOutputStream(mapFilename, true), StandardCharsets.UTF_8)) {
+        try (Writer mof = new OutputStreamWriter(IOUtils.buffer(new FileOutputStream(mapFilename, true)),
+                                                 StandardCharsets.UTF_8)) {
             mof.write("" + end);
             mof.write(" ");
             mof.write(indexedName);
@@ -104,22 +107,23 @@ public class FingerPrintDB implements AutoCloseable {
         log.info("Index written to disk");
     }
     
-    private long bytesReadFromStream = 0;
+    
     public void openForSearching() throws FileNotFoundException {
-        if (fin == null ) {
-            fin = new DataInputStream(new FileInputStream(this.dbFilename));
+        if (fin == null) {
+            fin = new DataInputStream(IOUtils.buffer(new FileInputStream(this.dbFilename)));
         }
     }
     
-    protected int readDBBlob(int[] buffer) throws IOException {
-        log.info("Starting search in {}", dbFilename);
-        
+    public int readDBBlob(int[] buffer, long bytesReadFromStream) throws IOException {
+        log.debug("Starting search in {}", dbFilename);
+    
+        Path dbFile = Path.of(this.dbFilename);
         int count = (int) Math.min(buffer.length - macro_sz,
-                                   (Files.size(Path.of(this.dbFilename))-bytesReadFromStream) / Integer.BYTES);
+                                   (Files.size(dbFile) - bytesReadFromStream) / Integer.BYTES);
         
         for (int i = 0; i < count; ++i) {
             buffer[i + macro_sz] = Integer.reverseBytes(fin.readInt());
-            bytesReadFromStream += Integer.BYTES;
+            //bytesReadFromStream += Integer.BYTES;
         }
         return count;
     }

@@ -2,6 +2,7 @@ package dk.kb.xcorrsound.search;
 
 import dk.kb.xcorrsound.FingerPrintDB;
 import dk.kb.xcorrsound.Utils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,17 +14,17 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 
 public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseable {
     public final double criteria = macro_sz * Integer.BYTES * 0.35 * 8;
-    private Logger log = LoggerFactory.getLogger(this.getClass());
+    private static Logger log = LoggerFactory.getLogger(FingerprintDBSearcher.class);
     
     public void query_scan(String queryFilename, Writer resultWriter)
             throws IOException, UnsupportedAudioFileException, InterruptedException {
+        log.info("Starting query_scan for {}", queryFilename);
         // "queryFilename" is the name of the wav file that is our query.
         //ret.clear();
         //AudioFile a(queryFilename.c_str());
@@ -44,13 +45,16 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         int pos = 0;
         int prevMatchPos = Integer.MAX_VALUE;
         
+        long bytesReadFromStream = 0;
+        
         while (true) {
             System.arraycopy(db, db.length - macro_sz,
                              db, 0, macro_sz);
             
-            int count = readDBBlob(db);
+            int count = readDBBlob(db, bytesReadFromStream);
+            bytesReadFromStream += (long) count * Integer.BYTES;
             //log.info("Reading next blob of {} bytes from db", read_bytes);
-            if (count <= 0){
+            if (count <= 0) {
                 break;
             }
             
@@ -75,7 +79,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                     continue;
                 }
                 
-                log.info("Found possible match at {}, examining further", i);
+                log.debug("Found possible match at {}, examining further", i);
                 Map.Entry<Integer, Integer> checkNearPosResult = checkNearPos(fingerprints,
                                                                               this.dbFilename,
                                                                               pos,
@@ -84,13 +88,13 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                 dist = checkNearPosResult.getKey();
                 
                 if (dist < criteria) {
-                    log.info("Found hit at {} with dist {}", pos, dist);
+                    log.debug("Found hit at {} with dist {}", pos, dist);
                     prevMatchPos = pos;
                     int finalPos = pos;
                     Integer hitFileStart = offsetsToFile.keySet()
                                                         .stream()
                                                         .filter(value -> value
-                                                                     < finalPos) //Only those that END after this hit
+                                                                         < finalPos) //Only those that END after this hit
                                                         .sorted(Comparator.reverseOrder()) //Lowest first.
                                                         .findFirst() //The lowest first must be our hit
                                                         .orElse(0);
@@ -109,16 +113,16 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                     int sampleRate = this.fp_strategy.getSampleRate();
                     
                     String timestamp = formatTimestamp(sampleInFile * advance / sampleRate);
-
+                    
                     String ss = "match in '" + filenameResult
                                 + "' at " + timestamp
-                                + " with distance " + dist;
+                                + " with distance " + dist + "\n";
                     resultWriter.write(ss);
                     
                 }
                 if (i + nearRange > end - macro_sz) {
                     int tmp = end - macro_sz - i;
-                    i = i + tmp;
+                    i   = i + tmp;
                     pos = pos + tmp;
                 } else {
                     i += nearRange;
@@ -129,8 +133,8 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
     }
     
     
-    private String formatTimestamp(int seconds) {
-        return DurationFormatUtils.formatDuration(seconds*1000, "HH:mm:ss", true);
+    private static String formatTimestamp(int seconds) {
+        return DurationFormatUtils.formatDuration(seconds * 1000, "HH:mm:ss", true);
     }
     
     
@@ -139,7 +143,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
     // and we must have a decent baseline, i.e. at least 10% through computation.
     // this is a heuristic to terminate early if we can see
     // there will not be a match here.
-    Map.Entry<Boolean, Integer> hammingEarlyTerminate(long[] fingerprints, int[] db, int start) {
+    private static Map.Entry<Boolean, Integer> hammingEarlyTerminate(long[] fingerprints, int[] db, int start) {
         
         int dist = 0;
         for (int i = 0; i < macro_sz; ++i) {
@@ -162,7 +166,11 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
     
     
     // checks +/- 100 around pos.
-    Map.Entry<Integer, Integer> checkNearPos(long[] fingerprints, String dbFilename, int pos, int[] db, int posInDb)
+    private static Map.Entry<Integer, Integer> checkNearPos(long[] fingerprints,
+                                                            String dbFilename,
+                                                            int pos,
+                                                            int[] db,
+                                                            int posInDb)
             throws IOException {
         
         if (posInDb > nearRange && posInDb < db.length - nearRange - macro_sz) {
@@ -188,11 +196,9 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         
         try (DataInputStream fin = new DataInputStream(new FileInputStream(dbFilename))) {
             
-            fin.skip(Integer.BYTES * begin);
-            
+            IOUtils.skipFully(fin, (long) Integer.BYTES * begin);
             
             int[] window = Utils.bytesToInts(fin.readNBytes(Integer.BYTES * (end - begin)));
-            
             
             Map.Entry<Integer, Integer> fullCheckResult = fullCheck(fingerprints, window);
             
@@ -200,7 +206,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         }
     }
     
-    Map.Entry<Integer, Integer> fullCheck(long[] fingerprints, int[] window) {
+    private static Map.Entry<Integer, Integer> fullCheck(long[] fingerprints, int[] window) {
         
         int bestDist = Integer.MAX_VALUE;
         int bestIdx = Integer.MAX_VALUE;
@@ -211,13 +217,13 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
             int dist = fullHamming(fingerprints, window, i);
             if (dist < bestDist) {
                 bestDist = dist;
-                bestIdx = i;
+                bestIdx  = i;
             }
         }
         return Map.entry(bestDist, bestIdx);
     }
     
-    int fullHamming(long[] fingerprints, int[] db, int start) {
+    private static int fullHamming(long[] fingerprints, int[] db, int start) {
         
         int dist = 0;
         for (int i = 0; i < macro_sz; ++i) {

@@ -4,7 +4,7 @@ public class Utils {
     public static int[] bytesToInts(byte[] bytes){
         int[] result = new int[bytes.length / 4];
         for (int i = 0; i < bytes.length; i+=4) {
-            int integer = ((bytes[i+0] << 24) + (bytes[i+1] << 16) + (bytes[i+2] << 8) + (bytes[i+3] << 0));
+            int integer = bytesToIntsLittleEndian(bytes[i+0], (bytes[i+1]),(bytes[i+2]),(bytes[i+3]));
             result[i/4] = integer;
         }
         return result;

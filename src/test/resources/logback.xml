@@ -1,0 +1,25 @@
+<configuration scan="true" scanPeriod="5 minutes">
+
+
+<!--Do not dump log config statements in the begining-->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}\(%file:%line\) - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <!--Log our own things in debug until we know that everything works-->
+<!--    <logger name="dk.kb" level="DEBUG"/>-->
+
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+</configuration>
