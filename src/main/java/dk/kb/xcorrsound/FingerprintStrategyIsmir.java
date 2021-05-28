@@ -118,6 +118,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     private static String constructTmpWaveFileName(String filename, int idx) {
         StringBuilder tmpWaveFileBuilder = new StringBuilder();
         String tmpDir = getTmpDir();
+        
         tmpWaveFileBuilder.append(tmpDir)
                           .append(filename.substring(idx))
                           .append(".wav");
