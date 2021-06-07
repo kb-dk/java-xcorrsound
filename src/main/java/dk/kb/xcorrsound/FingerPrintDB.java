@@ -60,10 +60,13 @@ public class FingerPrintDB implements AutoCloseable {
         
         String mapFile = getMapFile(filename);
     
-        File file = new File(mapFile);
-        file.getParentFile().mkdirs();
-        file.createNewFile();
-        //FileUtils.touch(file);
+        File file = new File(mapFile).getAbsoluteFile();
+        if (!file.exists()){
+            FileUtils.touch(file);
+        }
+        //file.getParentFile().mkdirs();
+        //file.createNewFile();
+        
         
         try (BufferedReader fin = IOUtils.buffer(new FileReader(mapFile, StandardCharsets.UTF_8))) {
             String line = fin.readLine();
@@ -80,8 +83,11 @@ public class FingerPrintDB implements AutoCloseable {
                                  long[] db,
                                  String indexedName) throws IOException {
         log.info("Writing index to disk");
-        
-        FileUtils.touch(new File(dbFilename));
+    
+        File file = new File(dbFilename).getAbsoluteFile();
+        if (!file.exists()){
+            FileUtils.touch(file);
+        }
         
         long initialSize = Files.size(Path.of(dbFilename));
         long end;
