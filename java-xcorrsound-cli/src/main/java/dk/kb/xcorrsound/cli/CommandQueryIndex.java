@@ -47,7 +47,7 @@ public class CommandQueryIndex implements Callable<Integer> {
         criteria = Optional.ofNullable(criteria).orElse(FingerprintDBSearcher.DEFAULT_CRITERIA);
         long[] fingerprints = new FingerprintDBSearcher().fp_strategy.getFingerprintsForFile(queryFile);
     
-        ExecutorService threadPool = Executors.newFixedThreadPool(processes);
+        ExecutorService threadPool = Executors.newFixedThreadPool(Math.min(dbfiles.size(),processes));
         List<Future<String>> results = new ArrayList<>();
         
         for (String dbfile : dbfiles) {
