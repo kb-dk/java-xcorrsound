@@ -92,7 +92,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                 dist = checkNearPosResult.getKey();
                 
                 if (dist < criteria) {
-                    log.debug("Found hit at {} with dist {}", pos, dist);
+                    log.info("Found hit at {} with dist {}", pos, dist);
                     prevMatchPos = pos;
                     int finalPos = pos;
                     Integer hitFileStart = offsetsToFile.keySet()
@@ -134,6 +134,8 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                 }
             }
         }
+        log.info("Completed search in {}", dbFilename);
+    
     }
     
     
