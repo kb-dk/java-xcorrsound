@@ -1,4 +1,4 @@
-package dk.kb.xcorrsound;
+package dk.kb.xcorrsound.cli;
 
 import dk.kb.xcorrsound.index.FingerprintDBIndexer;
 import picocli.CommandLine;

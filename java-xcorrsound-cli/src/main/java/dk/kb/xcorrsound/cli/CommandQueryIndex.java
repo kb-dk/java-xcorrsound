@@ -1,4 +1,4 @@
-package dk.kb.xcorrsound;
+package dk.kb.xcorrsound.cli;
 
 import dk.kb.xcorrsound.search.FingerprintDBSearcher;
 import org.slf4j.Logger;
