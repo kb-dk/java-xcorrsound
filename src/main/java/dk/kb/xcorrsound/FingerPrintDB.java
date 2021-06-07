@@ -29,7 +29,7 @@ public class FingerPrintDB implements AutoCloseable {
     public static final Integer nearRange = 150; // how far to look around a position that
     // is significantly different from noise.
     
-    protected final FingerprintStrategy fp_strategy;
+    public final FingerprintStrategy fp_strategy;
     protected String dbFilename;
     protected Map<Integer, String> offsetsToFile = new TreeMap<>();
     
