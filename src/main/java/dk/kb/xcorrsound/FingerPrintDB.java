@@ -59,7 +59,11 @@ public class FingerPrintDB implements AutoCloseable {
         this.dbFilename = filename;
         
         String mapFile = getMapFile(filename);
-        FileUtils.touch(new File(mapFile));
+    
+        File file = new File(mapFile);
+        file.getParentFile().mkdirs();
+        file.createNewFile();
+        //FileUtils.touch(file);
         
         try (BufferedReader fin = IOUtils.buffer(new FileReader(mapFile, StandardCharsets.UTF_8))) {
             String line = fin.readLine();
