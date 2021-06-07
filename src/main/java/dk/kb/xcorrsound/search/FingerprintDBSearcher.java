@@ -19,10 +19,10 @@ import java.util.Comparator;
 import java.util.Map;
 
 public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseable {
-    public final double criteria = macro_sz * Integer.BYTES * 0.35 * 8;
+    public static final double DEFAULT_CRITERIA = 0.35 * (macro_sz * Integer.BYTES * 8);
     private static Logger log = LoggerFactory.getLogger(FingerprintDBSearcher.class);
     
-    public void query_scan(String queryFilename, Writer resultWriter)
+    public void query_scan(String queryFilename,double criteria, Writer resultWriter)
             throws IOException, UnsupportedAudioFileException, InterruptedException {
         log.info("Starting query_scan for {}", queryFilename);
         // "queryFilename" is the name of the wav file that is our query.
@@ -227,8 +227,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         
         int dist = 0;
         for (int i = 0; i < macro_sz; ++i) {
-            long exponent = Integer.toUnsignedLong(db[i + start]);
-            long x = fingerprints[i + fpSkip] ^ exponent;
+            long x = fingerprints[i + fpSkip] ^ Integer.toUnsignedLong(db[i + start]);
             int cnt = Long.bitCount(x);
             dist += cnt;
         }

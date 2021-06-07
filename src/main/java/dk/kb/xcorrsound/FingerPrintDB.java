@@ -11,10 +11,9 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -25,9 +24,9 @@ import java.util.TreeMap;
 public class FingerPrintDB implements AutoCloseable {
     
     private Logger log = LoggerFactory.getLogger(this.getClass());
-    public static Integer macro_sz = 256;
-    public static Integer fpSkip = 50; // skip this much into fingerprint array.
-    public static Integer nearRange = 150; // how far to look around a position that
+    public static final Integer macro_sz = 256;
+    public static final Integer fpSkip = 50; // skip this much into fingerprint array.
+    public static final Integer nearRange = 150; // how far to look around a position that
     // is significantly different from noise.
     
     protected final FingerprintStrategy fp_strategy;
@@ -52,9 +51,7 @@ public class FingerPrintDB implements AutoCloseable {
         }
         String mapFilePrefix = filename.substring(0, idx);
         String mapFileSuffix = filename.substring(idx);
-        StringBuilder ss = new StringBuilder();
-        ss.append(mapFilePrefix).append(mapFileSuffix).append(".map");
-        return ss.toString();
+        return mapFilePrefix + mapFileSuffix + ".map";
     }
     
     
@@ -64,8 +61,7 @@ public class FingerPrintDB implements AutoCloseable {
         String mapFile = getMapFile(filename);
         FileUtils.touch(new File(mapFile));
         
-        try (BufferedReader fin = new BufferedReader(new InputStreamReader(new FileInputStream(mapFile),
-                                                                           StandardCharsets.UTF_8))) {
+        try (BufferedReader fin = IOUtils.buffer(new FileReader(mapFile, StandardCharsets.UTF_8))) {
             String line = fin.readLine();
             while (line != null) {
                 String[] splits = line.split("\\s+", 2);
@@ -85,7 +81,7 @@ public class FingerPrintDB implements AutoCloseable {
         
         long initialSize = Files.size(Path.of(dbFilename));
         long end;
-        try (DataOutputStream of = new DataOutputStream(IOUtils.buffer(new FileOutputStream(dbFilename, true)))) {
+        try (DataOutputStream of = new DataOutputStream(IOUtils.buffer(FileUtils.openOutputStream(new File(dbFilename), true)))) {
             
             for (int i = 0, dbLength = db.length; i < dbLength; i++) {
                 long j = db[i];
@@ -97,8 +93,8 @@ public class FingerPrintDB implements AutoCloseable {
         }
         
         String mapFilename = dbFilename + ".map";
-        try (Writer mof = new OutputStreamWriter(IOUtils.buffer(new FileOutputStream(mapFilename, true)),
-                                                 StandardCharsets.UTF_8)) {
+        
+        try (Writer mof = IOUtils.buffer(new FileWriter(mapFilename,StandardCharsets.UTF_8, true))) {
             mof.write("" + end);
             mof.write(" ");
             mof.write(indexedName);

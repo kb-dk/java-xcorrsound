@@ -44,7 +44,7 @@ class FingerPrintDBImplTest {
                                .getResource("chunck1.mp3")
                                .getFile();
         StringWriter result = new StringWriter();
-        ismir.query_scan(mp3file, result);
+        ismir.query_scan(mp3file, FingerprintDBSearcher.DEFAULT_CRITERIA, result);
         Assertions.assertTrue(result.toString().contains("at 00:03:51 with distance 363"));
         System.out.println(result);
     }

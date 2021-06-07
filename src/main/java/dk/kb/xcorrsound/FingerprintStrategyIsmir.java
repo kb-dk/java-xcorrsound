@@ -128,10 +128,10 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     
     private static String getTmpDir() {
         String val = System.getenv("TmpSoundIndex");
-        if (val == null) {
+        if (val == null || val.isBlank()) {
             return "/tmp/";
         } else {
-            return "" + val;
+            return val;
         }
     }
     
@@ -139,7 +139,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         short[] samples;
         try (AudioInputStream as = AudioSystem.getAudioInputStream(tmpWaveFile.toFile())) {
             samples = readChannel(as, 0);
-            log.info("Read {} bytes from wav file {}", samples.length, tmpWaveFile);
+            log.debug("Read {} bytes from wav file {}", samples.length, tmpWaveFile);
         }
         return samples;
     }
@@ -173,7 +173,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     }
     
     protected static long[] generateFingerprintStream(short[] input, int frameLength, int sampleRate, int advance) {
-        log.info("Generating fingerprint for input of length {}", input.length);
+        log.debug("Generating fingerprint for input of length {}", input.length);
         double[] hanningWindow = getHanningWindow(frameLength);
         int[] logScale = getLogScale(2000, frameLength, sampleRate);
         
