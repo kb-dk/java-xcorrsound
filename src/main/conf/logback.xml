@@ -1,6 +1,6 @@
 <configuration scan="true" >
 
-  <property name="LOGFILE" value="${user.home}/logs/template-app.log" />
+  <property name="LOGFILE" value="${user.home}/logs/java-xcorrsound.log" />
 
   <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
     <file>${LOGFILE}</file>
