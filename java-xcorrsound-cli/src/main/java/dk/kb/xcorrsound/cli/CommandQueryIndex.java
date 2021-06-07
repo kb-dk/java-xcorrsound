@@ -31,6 +31,8 @@ public class CommandQueryIndex implements Callable<Integer> {
     @CommandLine.Option(names = {"-c", "--criteria"}, required = false)
     public Double criteria;
     
+    @CommandLine.Option(names = {"-P", "--num-procs"}, required = false, defaultValue = "12")
+    public Integer processes;
     
     public static void main(String... args) {
         CommandLine app = new CommandLine(new CommandQueryIndex());
@@ -45,7 +47,7 @@ public class CommandQueryIndex implements Callable<Integer> {
         criteria = Optional.ofNullable(criteria).orElse(FingerprintDBSearcher.DEFAULT_CRITERIA);
         long[] fingerprints = new FingerprintDBSearcher().fp_strategy.getFingerprintsForFile(queryFile);
     
-        ExecutorService threadPool = Executors.newFixedThreadPool(12);
+        ExecutorService threadPool = Executors.newFixedThreadPool(processes);
         List<Future<String>> results = new ArrayList<>();
         
         for (String dbfile : dbfiles) {
