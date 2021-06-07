@@ -22,20 +22,24 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
     public static final double DEFAULT_CRITERIA = 0.35 * (macro_sz * Integer.BYTES * 8);
     private static Logger log = LoggerFactory.getLogger(FingerprintDBSearcher.class);
     
-    public void query_scan(String queryFilename,double criteria, Writer resultWriter)
+    public void query_scan(String queryFilename, double criteria, Writer resultWriter)
             throws IOException, UnsupportedAudioFileException, InterruptedException {
+    
         log.info("Starting query_scan for {}", queryFilename);
         // "queryFilename" is the name of the wav file that is our query.
         //ret.clear();
         //AudioFile a(queryFilename.c_str());
-        
+    
         //List<int16_t> samples;
-        
+    
         //a.getSamplesForChannel(0, samples);
-        
+    
         long[] fingerprints = this.fp_strategy.getFingerprintsForFile(queryFilename);
-        
-        
+        query_scan(fingerprints, criteria, resultWriter);
+    }
+    
+    public void query_scan(long[] fingerprints, double criteria, Writer resultWriter)
+            throws IOException {
         int[] db = new int[1024 * 1024 + macro_sz];
         
         this.openForSearching();
