@@ -23,7 +23,7 @@ public class FingerprintDBIndexer extends FingerPrintDB implements AutoCloseable
         
         //a.getSamplesForChannel(0, samples);
         log.debug("Generating fingerprints for '{}'", filename);
-        long[] fingerprints = this.fp_strategy.getFingerprintsForFile(filename);
+        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(filename);
         
         log.debug("Generated {} fingerprints for '{}'", fingerprints.length, filename);
         

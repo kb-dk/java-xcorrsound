@@ -34,7 +34,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
     
         //a.getSamplesForChannel(0, samples);
     
-        long[] fingerprints = this.fp_strategy.getFingerprintsForFile(queryFilename);
+        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(queryFilename);
         query_scan(fingerprints, criteria, resultWriter);
     }
     
@@ -66,7 +66,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
             
             
             for (int i = 0; i < end - macro_sz; i += 8, pos += 8) {
-                if (pos - prevMatchPos < (this.fp_strategy.getSampleRate() / 64) && prevMatchPos != Integer.MAX_VALUE) {
+                if (pos - prevMatchPos < (this.getFingerprintStrategy().getSampleRate() / 64) && prevMatchPos != Integer.MAX_VALUE) {
                     continue;
                 }
                 
@@ -113,8 +113,8 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                     String filenameResult = offsetsToFile.get(hitEntry);
                     
                     int sampleInFile = pos - hitFileStart;
-                    int advance = this.fp_strategy.getAdvance();
-                    int sampleRate = this.fp_strategy.getSampleRate();
+                    int advance = this.getFingerprintStrategy().getAdvance();
+                    int sampleRate = this.getFingerprintStrategy().getSampleRate();
                     
                     String timestamp = formatTimestamp(sampleInFile * advance / sampleRate);
                     
