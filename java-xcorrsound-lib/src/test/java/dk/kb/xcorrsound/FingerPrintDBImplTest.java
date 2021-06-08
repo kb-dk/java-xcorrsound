@@ -14,7 +14,7 @@ import java.io.StringWriter;
 class FingerPrintDBImplTest {
     
     @Test
-    void insert() throws IOException, UnsupportedAudioFileException, InterruptedException {
+    public void insert() throws IOException, UnsupportedAudioFileException, InterruptedException {
     
         FingerprintDBIndexer ismir = new FingerprintDBIndexer();
         File testDB = resetDB();
@@ -36,7 +36,7 @@ class FingerPrintDBImplTest {
     }
     
     @Test
-    void query() throws UnsupportedAudioFileException, InterruptedException, IOException {
+    public void query() throws UnsupportedAudioFileException, InterruptedException, IOException {
         FingerprintDBSearcher ismir = new FingerprintDBSearcher();
         ismir.open("testDB");
         String mp3file = Thread.currentThread()

@@ -29,7 +29,7 @@ public class FingerPrintDB implements AutoCloseable {
     public static final Integer nearRange = 150; // how far to look around a position that
     // is significantly different from noise.
     
-    public final FingerprintStrategy fp_strategy;
+    private final FingerprintStrategy fingerprintStrategy;
     protected String dbFilename;
     protected Map<Integer, String> offsetsToFile = new TreeMap<>();
     
@@ -37,8 +37,12 @@ public class FingerPrintDB implements AutoCloseable {
     
     
     public FingerPrintDB() {
-        this.fp_strategy = new FingerprintStrategyIsmir();
+        this.fingerprintStrategy = new FingerprintStrategyIsmir();
         //this.fp_strategy = new si::fingerprint_strategy_chroma();
+    }
+    
+    public FingerprintStrategy getFingerprintStrategy() {
+        return fingerprintStrategy;
     }
     
     String getMapFile(String filename) {
