@@ -110,7 +110,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
             Files.deleteIfExists(Path.of(tmpWaveFile));
             return null;
         }
-        log.info("File '{}' converted, reading audio stream", filename);
+        log.info("File '{}' converted, reading audio stream from {}", filename, tmpWaveFile);
         return Path.of(tmpWaveFile);
         
     }
