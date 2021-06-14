@@ -5,6 +5,5 @@ module dk.kb.xcorrsound.cli {
     
     requires dk.kb.xcorrsound;
     requires org.slf4j;
-    requires java.desktop;
     
 }

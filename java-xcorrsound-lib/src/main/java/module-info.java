@@ -1,4 +1,8 @@
+@SuppressWarnings({ "requires-automatic"})
+    //https://stackoverflow.com/a/60156568/11532838
+    //https://stackoverflow.com/a/49601182/11532838
 module dk.kb.xcorrsound {
+    
     //Which packages other modules can access
     exports dk.kb.xcorrsound.index;
     exports dk.kb.xcorrsound.search;
@@ -15,7 +19,7 @@ module dk.kb.xcorrsound {
     requires commons.math3;
     
     //AudioFile parsing: javax.sound.sampled
-    requires java.desktop;
+    requires transitive java.desktop;
     
     //Format timestamp in output...
     requires org.apache.commons.lang3;
