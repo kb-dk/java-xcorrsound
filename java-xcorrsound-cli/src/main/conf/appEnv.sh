@@ -1,8 +1,8 @@
 # File to be sourced in to application runner
 # Allow for customisations here (allows application runner to be effectively read-only)
 
-INDEX_MAIN_CLASS=dk.kb.xcorrsound.cli/dk.kb.xcorrsound.cli.CommandBuildIndex
-QUERY_MAIN_CLASS=dk.kb.xcorrsound.cli/dk.kb.xcorrsound.cli.CommandQueryIndex
+INDEX_MAIN_CLASS=dk.kb.xcorrsound.cli.CommandBuildIndex
+QUERY_MAIN_CLASS=dk.kb.xcorrsound.cli.CommandQueryIndex
 APP_CONFIG=templateConfig.yaml
 
 

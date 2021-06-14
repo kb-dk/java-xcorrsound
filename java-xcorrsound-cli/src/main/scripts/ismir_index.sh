@@ -14,8 +14,12 @@ if [ -z "$APP_CONFIG" ]; then
     exit 1
 fi
 
-CLASS_PATH="${CLASS_PATH_OVERRIDE:-"$SCRIPT_DIR/../lib"}"
+CLASS_PATH="${CLASS_PATH_OVERRIDE:-"$SCRIPT_DIR/../lib/*"}"
 JAVA_OPTS=${JAVA_OPTS:-"-Xmx256m -Xms256m"}
 
-exec java $JAVA_OPTS --module-path "$CLASS_PATH" -Dlogback.configurationFile="$SCRIPT_DIR/../conf/logback.xml" -Ddk.kb.applicationConfig="$SCRIPT_DIR/../conf/$APP_CONFIG" --module "$INDEX_MAIN_CLASS" "$@"
+java $JAVA_OPTS -classpath "$CLASS_PATH" -Dlogback.configurationFile="$SCRIPT_DIR/../conf/logback.xml" -Ddk.kb.applicationConfig="$SCRIPT_DIR/../conf/$APP_CONFIG" "$INDEX_MAIN_CLASS" "$@"
 
+
+#How to run with modules
+#MODULE_PATH="${MODULE_PATH_OVERRIDE:-"$SCRIPT_DIR/../lib"}"
+#exec java $JAVA_OPTS --module-path "$MODULE_PATH" -Dlogback.configurationFile="$SCRIPT_DIR/../conf/logback.xml" -Ddk.kb.applicationConfig="$SCRIPT_DIR/../conf/$APP_CONFIG" --module "dk.kb.xcorrsound.cli/$INDEX_MAIN_CLASS" "$@"
