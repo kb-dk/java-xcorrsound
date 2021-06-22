@@ -22,8 +22,7 @@ module dk.kb.xcorrsound {
     requires transitive java.desktop;
     
     //Format timestamp in output...
-    requires org.apache.commons.lang3;
-    
+    requires transitive org.apache.commons.lang3;
     
     
     //Logging
@@ -31,6 +30,9 @@ module dk.kb.xcorrsound {
     
     //FileUtils, IOUtils
     requires org.apache.commons.io;
+    
+    //ffmpeg
+    requires com.github.kokorin.jaffree;
     
     
 }

@@ -4,12 +4,14 @@ import dk.kb.xcorrsound.index.FingerprintDBIndexer;
 import dk.kb.xcorrsound.search.FingerprintDBSearcher;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.URISyntaxException;
 
 class FingerPrintDBImplTest {
     
@@ -45,7 +47,28 @@ class FingerPrintDBImplTest {
                                .getFile();
         StringWriter result = new StringWriter();
         ismir.query_scan(mp3file, FingerprintDBSearcher.DEFAULT_CRITERIA, result);
-        Assertions.assertTrue(result.toString().contains("at 00:03:51 with distance 363"));
+        Assertions.assertTrue(result.toString().contains("at 00:03:53 with distance 363"));
         System.out.println(result);
+    }
+    
+    @Test
+    @Disabled
+    public void queryLarge() throws UnsupportedAudioFileException, InterruptedException, IOException,
+                                    URISyntaxException {
+        FingerprintDBSearcher ismir = new FingerprintDBSearcher();
+        File indexFile = new File(Thread.currentThread()
+                                        .getContextClassLoader()
+                                        .getResource("drp3_2007-12-01.ismir.index")
+                                        .toURI());
+        ismir.open(indexFile.getAbsolutePath());
+        File mp3file = new File(Thread.currentThread()
+                               .getContextClassLoader()
+                               .getResource("mceinar_chunk1.mp3")
+                               .toURI());
+        StringWriter result = new StringWriter();
+        ismir.query_scan(mp3file.getAbsolutePath(), FingerprintDBSearcher.DEFAULT_CRITERIA, result);
+        System.out.println(result.toString());
+
+        //Assertions.assertTrue(result.toString().contains("at 00:03:51 with distance 363"));
     }
 }

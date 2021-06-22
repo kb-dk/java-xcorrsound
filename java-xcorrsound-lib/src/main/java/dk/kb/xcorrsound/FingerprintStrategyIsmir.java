@@ -54,11 +54,13 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
             //wsr.getSamplesForChannel(0, samples);
             
         } else if (!"wav".equals(filename.substring(filename.length() - 3))) {
-            Path tmpWavFile = convertToWav(filename);
-            try {
-                samples = readWavFile(tmpWavFile);
-            } finally {
-                Files.deleteIfExists(tmpWavFile);
+            Path tmpWavFile = WavConverter.inlineConvertToWav(filename);
+            if (tmpWavFile != null) {
+                try {
+                    samples = readWavFile(tmpWavFile);
+                } finally {
+                    Files.deleteIfExists(tmpWavFile);
+                }
             }
         } else {
             samples = readWavFile(Path.of(filename));
@@ -79,61 +81,6 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         return fingerprintStream;
     }
     
-    
-    private static Path convertToWav(String filename)
-            throws IOException, InterruptedException {
-        log.info("File '{}' is not in wav format; Converting", filename);
-        int idx = 0;
-        for (int i = filename.length(); i > 0; --i) {
-            if (filename.charAt(i - 1) == '/') {
-                idx = i;
-                break;
-            }
-        }
-        
-        String tmpWaveFile = constructTmpWaveFileName(filename, idx);
-        
-        int res;
-        
-        Files.deleteIfExists(Path.of(tmpWaveFile));
-        String ss = "ffmpeg -hide_banner -loglevel error -i "
-                    + filename
-                    + " -ar 5512 "
-                    + tmpWaveFile
-                    + "";
-        Process ffmpeg = Runtime.getRuntime().exec(ss);
-        ffmpeg.waitFor();
-        res = ffmpeg.exitValue();
-        
-        
-        if (res != 0) {
-            Files.deleteIfExists(Path.of(tmpWaveFile));
-            return null;
-        }
-        log.info("File '{}' converted, reading audio stream from {}", filename, tmpWaveFile);
-        return Path.of(tmpWaveFile);
-        
-    }
-    
-    private static String constructTmpWaveFileName(String filename, int idx) {
-        StringBuilder tmpWaveFileBuilder = new StringBuilder();
-        String tmpDir = getTmpDir();
-        
-        tmpWaveFileBuilder.append(tmpDir)
-                          .append(filename.substring(idx))
-                          .append(".wav");
-        String tmpWaveFile = tmpWaveFileBuilder.toString();
-        return tmpWaveFile;
-    }
-    
-    private static String getTmpDir() {
-        String val = System.getenv("TmpSoundIndex");
-        if (val == null || val.isBlank()) {
-            return "/tmp/";
-        } else {
-            return val;
-        }
-    }
     
     private static short[] readWavFile(Path tmpWaveFile) throws IOException, UnsupportedAudioFileException {
         short[] samples;

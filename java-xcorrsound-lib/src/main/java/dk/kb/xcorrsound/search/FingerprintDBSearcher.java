@@ -84,7 +84,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                     final Integer hitPos = checkNearPosResult.getValue();
                     
                     if (hitDist < criteria) {
-                        log.info("Found hit at {} with dist {}", hitPos, hitDist);
+                        log.info("Found hit at offset {} with dist {}", hitPos, hitDist);
                         prevMatchPos = hitPos;
     
 

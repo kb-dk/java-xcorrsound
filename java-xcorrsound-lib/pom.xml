@@ -15,6 +15,13 @@
 
 
     <dependencies>
+
+        <dependency>
+            <groupId>com.github.kokorin.jaffree</groupId>
+            <artifactId>jaffree</artifactId>
+            <version>2021.05.31</version>
+        </dependency>
+
         <dependency>
             <!--FFT-->
             <groupId>com.github.wendykierp</groupId>
