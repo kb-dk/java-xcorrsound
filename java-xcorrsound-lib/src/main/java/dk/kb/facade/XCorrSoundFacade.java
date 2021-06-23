@@ -11,7 +11,7 @@ import dk.kb.xcorrsound.FingerprintStrategyIsmir;
 public class XCorrSoundFacade {
 
     public static long[] generateFingerPrintFromSoundFile(String fileName) throws Exception{
-        FingerprintStrategyIsmir fpGenerator = new FingerprintStrategyIsmir();                
+        FingerprintStrategyIsmir fpGenerator = new FingerprintStrategyIsmir(2048, 64, 5512, 32);
          long[] fp =  fpGenerator.getFingerprintsForFile(fileName);        
          return fp;
     }

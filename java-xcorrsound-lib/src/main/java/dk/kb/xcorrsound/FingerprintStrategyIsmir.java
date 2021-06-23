@@ -20,13 +20,20 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     
     private static Logger log = LoggerFactory.getLogger(FingerprintStrategyIsmir.class);
     
-    private final int frameLength = 2048;
+    private final int frameLength;
     
-    private final int advance = 64;
+    private final int advance;
     
-    private final int sampleRate = 5512;
+    private final int sampleRate;
     
-    private final int bands = 32;
+    private final int bands;
+    
+    public FingerprintStrategyIsmir(int frameLength, int advance, int sampleRate, int bands) {
+        this.frameLength = frameLength;
+        this.advance     = advance;
+        this.sampleRate  = sampleRate;
+        this.bands       = bands;
+    }
     
     public int getFrameLength() {
         return frameLength;
@@ -56,7 +63,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
             //wsr.getSamplesForChannel(0, samples);
             
         } else if (!"wav".equals(filename.substring(filename.length() - 3))) {
-            Path tmpWavFile = WavConverter.inlineConvertToWav(filename);
+            Path tmpWavFile = WavConverter.inlineConvertToWav(filename, sampleRate);
             if (tmpWavFile != null) {
                 try {
                     samples = readWavFile(tmpWavFile);

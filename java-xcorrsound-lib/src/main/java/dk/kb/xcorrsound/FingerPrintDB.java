@@ -40,8 +40,10 @@ public class FingerPrintDB implements AutoCloseable {
     
     
     public FingerPrintDB() {
-        this.fingerprintStrategy = new FingerprintStrategyIsmir();
-        //this.fp_strategy = new si::fingerprint_strategy_chroma();
+        this.fingerprintStrategy = new FingerprintStrategyIsmir(2048, 64, 5512, 32);
+    }
+    public FingerPrintDB(int frameLength, int advance, int sampleRate, int bands) {
+        this.fingerprintStrategy = new FingerprintStrategyIsmir(frameLength, advance, sampleRate, bands);
     }
     
     public FingerprintStrategy getFingerprintStrategy() {

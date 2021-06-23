@@ -22,7 +22,7 @@ public class WavConverter {
     private static Logger log = LoggerFactory.getLogger(WavConverter.class);
     
     
-    protected static Path inlineConvertToWav(String filename) throws IOException {
+    protected static Path inlineConvertToWav(String filename, int sampleRate) throws IOException {
         log.info("File '{}' is not in wav format; Converting", filename);
     
         Path tmpWaveFile = wavFileName(filename);
@@ -33,7 +33,7 @@ public class WavConverter {
                               .addArgument("-hide_banner")
                               .addInput(UrlInput.fromUrl(filename))
                               .setOverwriteOutput(true)
-                              .addArguments("-ar", "5512")
+                              .addArguments("-ar", sampleRate+"")
                               .addOutput(UrlOutput.toUrl(tmpWaveFile.toString()));
         try {
             FFmpegResult result = fFmpeg.execute();
@@ -46,7 +46,7 @@ public class WavConverter {
         return tmpWaveFile;
     }
     
-    protected static Path convertToWav(String filename)
+    protected static Path convertToWav(String filename, int sampleRate)
             throws IOException, InterruptedException {
         log.info("File '{}' is not in wav format; Converting", filename);
         Path tmpWaveFile = wavFileName(filename);
@@ -56,7 +56,7 @@ public class WavConverter {
         Files.deleteIfExists(tmpWaveFile);
         String ss = "ffmpeg -hide_banner -loglevel error -i "
                     + filename
-                    + " -ar 5512 "
+                    + " -ar "+sampleRate+" "
                     + tmpWaveFile.toAbsolutePath()
                     + "";
         Process ffmpeg = Runtime.getRuntime().exec(ss);
