@@ -3,7 +3,8 @@ package dk.kb.xcorrsound;
 import dk.kb.xcorrsound.index.FingerprintDBIndexer;
 import dk.kb.xcorrsound.search.FingerprintDBSearcher;
 import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.Assertions;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +48,9 @@ class FingerPrintDBImplTest {
                                .getFile();
         StringWriter result = new StringWriter();
         ismir.query_scan(mp3file, FingerprintDBSearcher.DEFAULT_CRITERIA, result);
-        Assertions.assertTrue(result.toString().contains("at 00:03:53 with distance 363"));
+        MatcherAssert.assertThat(result.toString(),
+                                 Matchers.containsString("at 00:03:53 with distance 363"));
+        //dist 79 if only using 16 bands
         System.out.println(result);
     }
     
