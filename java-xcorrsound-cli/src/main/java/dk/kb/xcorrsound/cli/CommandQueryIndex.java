@@ -1,6 +1,7 @@
 package dk.kb.xcorrsound.cli;
 
 import dk.kb.xcorrsound.search.FingerprintDBSearcher;
+import dk.kb.xcorrsound.search.IsmirSearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -75,7 +76,8 @@ public class CommandQueryIndex implements Callable<Integer> {
         searcher.open(dbfile);
         
         try (StringWriter resultWriter = new StringWriter()) {
-            searcher.query_scan(fingerprints, criteria, resultWriter);
+            List<IsmirSearchResult> result = searcher.query_scan(fingerprints, criteria);
+            result.forEach(singleResult -> resultWriter.write(singleResult.toString()));
             return resultWriter.toString();
         }
     }

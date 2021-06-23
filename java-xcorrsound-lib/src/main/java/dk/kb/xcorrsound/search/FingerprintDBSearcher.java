@@ -12,14 +12,18 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseable {
+    
     public static final double DEFAULT_CRITERIA = 0.35 * (macro_sz * Integer.BYTES * 8);
+    
     private static Logger log = LoggerFactory.getLogger(FingerprintDBSearcher.class);
     
-    public void query_scan(String queryFilename, double criteria, Writer resultWriter)
+    public List<IsmirSearchResult> query_scan(String queryFilename, double criteria)
             throws IOException, UnsupportedAudioFileException, InterruptedException {
         
         log.info("Starting query_scan for {}", queryFilename);
@@ -32,10 +36,10 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         //a.getSamplesForChannel(0, samples);
         
         long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(queryFilename);
-        query_scan(fingerprints, criteria, resultWriter);
+        return query_scan(fingerprints, criteria);
     }
     
-    public void query_scan(long[] fingerprints, double criteria, Writer resultWriter)
+    public List<IsmirSearchResult> query_scan(long[] fingerprints, double criteria)
             throws IOException {
         int[] db = new int[1024 * 1024 + macro_sz];
         
@@ -44,6 +48,8 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         log.info("Starting search in {}", dbFilename);
         int pos = 0;
         int prevMatchPos = Integer.MAX_VALUE;
+        
+        List<IsmirSearchResult> result = new ArrayList<>();
         
         while (true) {
             int bufferContentCount = readDBBlob(db);
@@ -86,8 +92,8 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                     if (hitDist < criteria) {
                         log.info("Found hit at offset {} with dist {}", hitPos, hitDist);
                         prevMatchPos = hitPos;
-    
-
+                        
+                        
                         Pair<Integer, Integer> hitEntry = offsetsToFile.keySet()
                                                                        .stream()
                                                                        //Only those that END after this hit
@@ -106,14 +112,14 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                                                                                     hitDist,
                                                                                     hitFileStart,
                                                                                     this.getFingerprintStrategy());
-                        resultWriter.write(ismirSearchResult.toString());
-                        
+                        result.add(ismirSearchResult);
                     }
                     
                 }
             }
         }
         log.info("Completed search in {}", dbFilename);
+        return result;
         
     }
     
@@ -158,7 +164,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
             window = Arrays.copyOfRange(db,
                     /* From */ windowStart,
                     /* To*/ windowEnd);
-         
+            
         } else { //The windows was NOT inside the db
             
             //Start from the posInIndex, or 0 if this would be negative

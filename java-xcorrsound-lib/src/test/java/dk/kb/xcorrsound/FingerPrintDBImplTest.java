@@ -2,6 +2,7 @@ package dk.kb.xcorrsound;
 
 import dk.kb.xcorrsound.index.FingerprintDBIndexer;
 import dk.kb.xcorrsound.search.FingerprintDBSearcher;
+import dk.kb.xcorrsound.search.IsmirSearchResult;
 import org.apache.commons.io.FileUtils;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -13,15 +14,24 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
+import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.hasValue;
 
 class FingerPrintDBImplTest {
     
     @Test
     public void insert() throws IOException, UnsupportedAudioFileException, InterruptedException {
-    
+        
         FingerprintDBIndexer ismir = new FingerprintDBIndexer();
         File testDB = resetDB();
-    
+        
         ismir.open(testDB.getAbsolutePath());
         String mp3file = Thread.currentThread()
                                .getContextClassLoader()
@@ -46,12 +56,19 @@ class FingerPrintDBImplTest {
                                .getContextClassLoader()
                                .getResource("chunck1.mp3")
                                .getFile();
-        StringWriter result = new StringWriter();
-        ismir.query_scan(mp3file, FingerprintDBSearcher.DEFAULT_CRITERIA, result);
-        MatcherAssert.assertThat(result.toString(),
-                                 Matchers.containsString("at 00:03:53 with distance 363"));
+        StringWriter resultWriter = new StringWriter();
+        List<IsmirSearchResult> results = ismir.query_scan(mp3file,
+                                                           FingerprintDBSearcher.DEFAULT_CRITERIA);
+        
+        
+        assertThat(results,
+                   hasItem(
+                           allOf(
+                                   hasProperty("dist", equalTo(363)),
+                                   hasProperty("posInIndex", equalTo(20109)))));
+        //Matchers.containsString("at 00:03:53 with distance 363"));
         //dist 79 if only using 16 bands
-        System.out.println(result);
+        System.out.println(resultWriter);
     }
     
     @Test
@@ -65,13 +82,18 @@ class FingerPrintDBImplTest {
                                         .toURI());
         ismir.open(indexFile.getAbsolutePath());
         File mp3file = new File(Thread.currentThread()
-                               .getContextClassLoader()
-                               .getResource("mceinar_chunk1.mp3")
-                               .toURI());
-        StringWriter result = new StringWriter();
-        ismir.query_scan(mp3file.getAbsolutePath(), FingerprintDBSearcher.DEFAULT_CRITERIA, result);
-        System.out.println(result.toString());
-
+                                      .getContextClassLoader()
+                                      .getResource("mceinar_chunk1.mp3")
+                                      .toURI());
+        List<IsmirSearchResult> results = ismir.query_scan(mp3file.getAbsolutePath(),
+                                                           FingerprintDBSearcher.DEFAULT_CRITERIA);
+        for (IsmirSearchResult result : results) {
+            System.out.println(result.toString());
+        }
+        
+        assertThat(results, hasItem(allOf(hasProperty("dist", equalTo(363)),
+                                          hasProperty("posInIndex", equalTo(20109)))));
+        
         //Assertions.assertTrue(result.toString().contains("at 00:03:51 with distance 363"));
     }
 }
