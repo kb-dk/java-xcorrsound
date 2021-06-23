@@ -9,8 +9,14 @@ import java.io.IOException;
 
 public class FingerprintDBIndexer extends FingerPrintDB implements AutoCloseable {
     
-    private Logger log = LoggerFactory.getLogger(this.getClass());
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
     
+    public FingerprintDBIndexer() {
+    }
+    
+    public FingerprintDBIndexer(int frameLength, int advance, int sampleRate, int bands) {
+        super(frameLength, advance, sampleRate, bands);
+    }
     
     public void insert(String filename, String indexedName)
             throws IOException, UnsupportedAudioFileException, InterruptedException {

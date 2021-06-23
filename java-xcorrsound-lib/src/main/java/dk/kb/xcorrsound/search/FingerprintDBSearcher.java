@@ -21,7 +21,14 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
     
     public static final double DEFAULT_CRITERIA = 0.35 * (macro_sz * Integer.BYTES * 8);
     
-    private static Logger log = LoggerFactory.getLogger(FingerprintDBSearcher.class);
+    private static final Logger log = LoggerFactory.getLogger(FingerprintDBSearcher.class);
+    
+    public FingerprintDBSearcher() {
+    }
+    
+    public FingerprintDBSearcher(int frameLength, int advance, int sampleRate, int bands) {
+        super(frameLength, advance, sampleRate, bands);
+    }
     
     public List<IsmirSearchResult> query_scan(String queryFilename, double criteria)
             throws IOException, UnsupportedAudioFileException, InterruptedException {

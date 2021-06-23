@@ -51,15 +51,17 @@ public class FingerPrintDB implements AutoCloseable {
     }
     
     String getMapFile(String filePath) {
-        final Path dir = Path.of(filePath);
-        String filename = dir.getFileName().toString();
-
+        final Path path = Path.of(filePath);
+        String filename = path.getFileName().toString();
+    
+        Path dir = path.toAbsolutePath().getParent();
         return dir.resolve(filename+".map").toAbsolutePath().toString();
     }
     
     
     public void open(String filename) throws IOException {
-        this.dbFilename = filename;
+        this.dbFilename = Path.of(filename).toAbsolutePath().toString();
+        this.dbFileLength = new File(dbFilename).length();
         
         String mapFile = getMapFile(filename);
         
@@ -82,7 +84,7 @@ public class FingerPrintDB implements AutoCloseable {
             }
         }
         
-        dbFileLength = new File(dbFilename).length();
+        
     }
     
     protected void writeDBToDisk(String dbFilename,

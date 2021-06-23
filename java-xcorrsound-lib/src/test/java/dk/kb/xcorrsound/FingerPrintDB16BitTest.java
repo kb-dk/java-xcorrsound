@@ -20,14 +20,14 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasProperty;
 
-class FingerPrintDBImplTest {
+class FingerPrintDB16BitTest {
     
-    public static final String DBFILE = "testDB32";
+    public static final String DBFILE = "testDB16";
     
     @Test
     public void insert() throws IOException, UnsupportedAudioFileException, InterruptedException {
         
-        FingerprintDBIndexer ismir = new FingerprintDBIndexer();
+        FingerprintDBIndexer ismir = new FingerprintDBIndexer(2048, 64, 5512, 16);
         File testDB = resetDB();
         
         ismir.open(DBFILE);
@@ -37,7 +37,6 @@ class FingerPrintDBImplTest {
                                .getFile();
         ismir.insert(mp3file, "testFile");
     }
-    
     
     private File resetDB() throws IOException {
         File testDB = new File(DBFILE);
@@ -49,7 +48,7 @@ class FingerPrintDBImplTest {
     
     @Test
     public void query() throws UnsupportedAudioFileException, InterruptedException, IOException {
-        FingerprintDBSearcher ismir = new FingerprintDBSearcher();
+        FingerprintDBSearcher ismir = new FingerprintDBSearcher(2048, 64, 5512, 16);
         ismir.open(DBFILE);
         String mp3file = Thread.currentThread()
                                .getContextClassLoader()
@@ -63,36 +62,14 @@ class FingerPrintDBImplTest {
         assertThat(results,
                    hasItem(
                            allOf(
-                                   hasProperty("dist", equalTo(363)),
+                                   hasProperty("dist", equalTo(79)),
                                    hasProperty("posInIndex", equalTo(20109)))));
         //Matchers.containsString("at 00:03:53 with distance 363"));
         //dist 79 if only using 16 bands
         System.out.println(resultWriter);
     }
     
-    @Test
-    @Disabled
-    public void queryLarge() throws UnsupportedAudioFileException, InterruptedException, IOException,
-                                    URISyntaxException {
-        FingerprintDBSearcher ismir = new FingerprintDBSearcher();
-        File indexFile = new File(Thread.currentThread()
-                                        .getContextClassLoader()
-                                        .getResource("drp3_2007-12-01.ismir.index")
-                                        .toURI());
-        ismir.open(indexFile.getAbsolutePath());
-        File mp3file = new File(Thread.currentThread()
-                                      .getContextClassLoader()
-                                      .getResource("mceinar_chunk1.mp3")
-                                      .toURI());
-        List<IsmirSearchResult> results = ismir.query_scan(mp3file.getAbsolutePath(),
-                                                           FingerprintDBSearcher.DEFAULT_CRITERIA);
-        for (IsmirSearchResult result : results) {
-            System.out.println(result.toString());
-        }
-        
-        assertThat(results, hasItem(allOf(hasProperty("dist", equalTo(363)),
-                                          hasProperty("posInIndex", equalTo(20109)))));
-        
-        //Assertions.assertTrue(result.toString().contains("at 00:03:51 with distance 363"));
-    }
+    
+    
+  
 }
