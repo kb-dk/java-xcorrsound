@@ -50,17 +50,11 @@ public class FingerPrintDB implements AutoCloseable {
         return fingerprintStrategy;
     }
     
-    String getMapFile(String filename) {
-        int idx = 0;
-        for (int i = filename.length(); i > 0; --i) {
-            if (filename.charAt(i - 1) == '/') {
-                idx = i;
-                break;
-            }
-        }
-        String mapFilePrefix = filename.substring(0, idx);
-        String mapFileSuffix = filename.substring(idx);
-        return mapFilePrefix + mapFileSuffix + ".map";
+    String getMapFile(String filePath) {
+        final Path dir = Path.of(filePath);
+        String filename = dir.getFileName().toString();
+
+        return dir.resolve(filename+".map").toAbsolutePath().toString();
     }
     
     
