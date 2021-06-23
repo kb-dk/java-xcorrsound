@@ -78,7 +78,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                     continue;
                 } else {
                     
-                    log.debug("Found possible match at {}, examining further", i);
+                    log.trace("Found possible match at {}, examining further", i);
                     Map.Entry<Integer, Integer> checkNearPosResult = checkNearPos(fingerprints,
                                                                                   pos,
                                                                                   db,

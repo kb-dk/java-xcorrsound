@@ -4,27 +4,27 @@ import dk.kb.xcorrsound.FingerprintStrategy;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
 public class IsmirSearchResult {
-    private final String filenameResult;
+    private final String filename;
     private final int posInIndex;
     private final int dist;
     private final int hitFileStart;
     private final FingerprintStrategy fingerprintStrategy;
     
-    public IsmirSearchResult(String filenameResult,
+    public IsmirSearchResult(String filename,
                              int posInIndex,
                              int dist,
                              int hitFileStart,
                              FingerprintStrategy fingerprintStrategy) {
     
-        this.filenameResult = filenameResult;
-        this.posInIndex     = posInIndex;
+        this.filename   = filename;
+        this.posInIndex = posInIndex;
         this.dist           = dist;
         this.hitFileStart   = hitFileStart;
         this.fingerprintStrategy = fingerprintStrategy;
     }
     
-    public String getFilenameResult() {
-        return filenameResult;
+    public String getFilename() {
+        return filename;
     }
     
     public int getPosInIndex() {
@@ -43,20 +43,24 @@ public class IsmirSearchResult {
         return fingerprintStrategy;
     }
     
+    
+    public String getTimestamp() {
+        final int secondsIntoFile = getOffsetSeconds();
+        return DurationFormatUtils.formatDuration(secondsIntoFile * 1000L, "HH:mm:ss", true);
+    }
+    
+    public int getOffsetSeconds() {
+        return (posInIndex - hitFileStart)
+               * fingerprintStrategy.getAdvance() / fingerprintStrategy.getSampleRate();
+    }
+    
+    
     public String toString(){
         
-        final int secondsIntoFile = (posInIndex - hitFileStart)
-                            * fingerprintStrategy.getAdvance() / fingerprintStrategy.getSampleRate();
-        String timestamp = formatTimestamp(secondsIntoFile);
-    
-        String ss = "match in '" + filenameResult
-                    + "' at " + timestamp
+        String ss = "match in '" + filename
+                    + "' at " + getTimestamp()
                     + " with distance " + dist + "\n";
         return ss;
     }
     
-    
-    private static String formatTimestamp(int seconds) {
-        return DurationFormatUtils.formatDuration(seconds * 1000, "HH:mm:ss", true);
-    }
 }
