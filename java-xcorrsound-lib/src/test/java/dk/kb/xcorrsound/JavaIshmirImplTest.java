@@ -21,6 +21,7 @@ public class JavaIshmirImplTest {
      * identical with the java-implementation.  
      * 
      */
+    
     @Test
     void testIdenticalFingerPrint() throws Exception {
         
@@ -64,9 +65,9 @@ public class JavaIshmirImplTest {
         }
         long time=System.currentTimeMillis()-start;
         System.out.println("Average time in millis:"+time/(1d*maxRuns));
-        
-        
+                
     }
+    
     
     
 }

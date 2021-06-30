@@ -43,6 +43,15 @@
             <version>1.7.30</version>
         </dependency>
 
+    <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+        <!--Project only uses com.google.common.collect.Iterables  to split in blocks. Can be implemented simple and dependency removed-->
+        <dependency>
+           <groupId>com.google.guava</groupId>
+           <artifactId>guava</artifactId>
+           <version>30.0-jre</version>
+         </dependency>
+
+
 
         <!--Tests-->
         <dependency>

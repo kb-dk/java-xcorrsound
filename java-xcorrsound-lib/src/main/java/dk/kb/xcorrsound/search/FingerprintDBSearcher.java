@@ -57,7 +57,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
             
             int count = readDBBlob(db, bytesReadFromStream);
             bytesReadFromStream += (long) count * Integer.BYTES;
-            //log.info("Reading next blob of {} bytes from db", read_bytes);
+            log.info("Reading next blob of {} bytes from db",bytesReadFromStream);
             if (count <= 0) {
                 break;
             }
@@ -70,20 +70,22 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
                     continue;
                 }
                 
+                int dist;
+                
                 
                 Map.Entry<Boolean, Integer> hammingEarlyTerminateResult = hammingEarlyTerminate(fingerprints,
                                                                                                 db,
                                                                                                 i);
                 
                 boolean earlyTermination = hammingEarlyTerminateResult.getKey();
-                int dist = hammingEarlyTerminateResult.getValue();
+                 dist = hammingEarlyTerminateResult.getValue();
                 
                 if (earlyTermination) {
                     //log.debug("Stopping search at frame {} as noisy overlap ({})",i,dist);
                     continue;
                 }
                 
-                log.debug("Found possible match at {}, examining further", i);
+                log.info("Found possible match at {}, examining further", i);
                 Map.Entry<Integer, Integer> checkNearPosResult = checkNearPos(fingerprints,
                                                                               this.dbFilename,
                                                                               pos,
@@ -151,12 +153,14 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
     // there will not be a match here.
     private static Map.Entry<Boolean, Integer> hammingEarlyTerminate(long[] fingerprints, int[] db, int start) {
         
+        
         int dist = 0;
         for (int i = 0; i < macro_sz; ++i) {
             
             long exponent = Integer.toUnsignedLong(db[i + start]);
             long x = fingerprints[i + fpSkip] ^ exponent;
             int cnt = Long.bitCount(x);
+            System.out.println(cnt);
             dist += cnt;
             
             if ((i % 5) == 0 && i > macro_sz / 10) {
