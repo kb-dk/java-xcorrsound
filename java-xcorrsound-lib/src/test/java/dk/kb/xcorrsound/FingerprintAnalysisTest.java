@@ -162,7 +162,7 @@ public class FingerprintAnalysisTest {
         }
     }
 
-    private long[] getCollapsed(long[] raw, UnaryOperator<Long> reducer) {
+    public static long[] getCollapsed(long[] raw, UnaryOperator<Long> reducer) {
         long[] collapsed = new long[raw.length];
         for (int i = 0 ; i < raw.length ; i++) {
             collapsed[i] = reducer.apply(raw[i]);
@@ -176,7 +176,7 @@ public class FingerprintAnalysisTest {
      * @param minBits the minimum amount of input bits to be set in order to produce an output bit.
      * @return
      */
-    long collapseTriples(long fingerprint, int minBits) {
+    static long collapseTriples(long fingerprint, int minBits) {
         long collapsed = 0L;
         for (int i = 0 ; i < 11 ; i++) { // 33 / 3 = 11. We accept that the outermost bit in the fingerprint is always 0
             long count = (fingerprint >>> (31 - i*3) & 0x1) +
@@ -199,7 +199,7 @@ public class FingerprintAnalysisTest {
      * @param bitJoiner   takes 2 bitsets (16 significant bits), joins them and returns the resulting bits.
      * @return
      */
-    long collapseEveryOther(long fingerprint, BiFunction<Long, Long, Long> bitJoiner) {
+    static long collapseEveryOther(long fingerprint, BiFunction<Long, Long, Long> bitJoiner) {
         long a = 0L;
         long b = 0L;
         for (int i = 0 ; i < 16 ; i++) {
@@ -222,7 +222,7 @@ public class FingerprintAnalysisTest {
      * @param bitJoiner   takes 2 bitsets (16 significant bits), joins them and returns the resulting bits.
      * @return
      */
-    long collapseHalf(long fingerprint, BiFunction<Long, Long, Long> bitJoiner) {
+    static long collapseHalf(long fingerprint, BiFunction<Long, Long, Long> bitJoiner) {
         long a = fingerprint >> 16;
         long b = fingerprint & 0xFFFF;
         /*
