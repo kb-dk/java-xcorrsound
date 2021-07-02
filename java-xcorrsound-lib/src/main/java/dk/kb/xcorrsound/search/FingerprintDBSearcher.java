@@ -160,7 +160,6 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
             long exponent = Integer.toUnsignedLong(db[i + start]);
             long x = fingerprints[i + fpSkip] ^ exponent;
             int cnt = Long.bitCount(x);
-            System.out.println(cnt);
             dist += cnt;
             
             if ((i % 5) == 0 && i > macro_sz / 10) {
