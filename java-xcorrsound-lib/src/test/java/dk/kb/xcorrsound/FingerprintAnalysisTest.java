@@ -57,7 +57,8 @@ public class FingerprintAnalysisTest {
     @Test
     void testStats() throws Exception {
         //String soundChunk = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3").getFile();
-        String soundChunk = Thread.currentThread().getContextClassLoader().getResource("clip_P3_1400_1600_040806_001-java.mp3").getFile(); // 238 seconds
+        //String soundChunk = Thread.currentThread().getContextClassLoader().getResource("clip_P3_1400_1600_040806_001-java.mp3").getFile(); // 238 seconds
+        String soundChunk = "/home/te/projects/java-xcorrsound/samples/last_xmas/P3_0600_0800_890110_001.mp3";
         dumpStats(soundChunk);
     }
 
@@ -65,7 +66,7 @@ public class FingerprintAnalysisTest {
         // Only the low 32 bits are significant (so why represent is as a long?)
         long[] fingerprints = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunk);
 
-        System.out.println("dumping fingerprint stats for '" + soundChunk + "'");
+        System.out.println("Dumping fingerprint stats for '" + soundChunk + "'");
         System.out.println("Fingerprints: " + fingerprints.length);
 
         // The raw signal has, according to Thomas Egense, the problem of having too many false positives for
