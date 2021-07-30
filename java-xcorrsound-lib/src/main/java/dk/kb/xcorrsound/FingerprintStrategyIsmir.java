@@ -52,6 +52,8 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     
     public long[] getFingerprintsForFile(String filename, Long offsetSeconds, Long lengthSeconds)
             throws IOException, UnsupportedAudioFileException {
+    
+        //TODO it would be better to have ffmpeg cut the duration, rather than doing it when reading the file
         
         // if filename is not wav file, start by converting to 5512hz stereo wav file
         // if filename is on stdin, assume it conforms to assumption above.
@@ -61,6 +63,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
             log.info("Filename is -, reading standard input");
             // use stdin wav file reader.
             
+            //TODO do we EVER need this?
             //TODO read wave file from stdIN...
             //wavStdinReader wsr;
             //wsr.getSamplesForChannel(0, samples);
@@ -75,6 +78,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
                 }
             }
         } else {
+            //TODO I think it would be safer to run wav files through ffmpeg also, to ensure framerate and the like
             samples = readWavFile(Path.of(filename), offsetSeconds, lengthSeconds);
         }
         
