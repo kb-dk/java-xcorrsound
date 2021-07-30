@@ -42,7 +42,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         
         //a.getSamplesForChannel(0, samples);
         
-        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(queryFilename);
+        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(queryFilename, null, null);
         return query_scan(fingerprints, criteria);
     }
     

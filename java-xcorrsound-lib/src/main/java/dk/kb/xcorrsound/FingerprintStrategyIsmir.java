@@ -1,5 +1,7 @@
 package dk.kb.xcorrsound;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.complex.Complex;
 import org.jtransforms.fft.DoubleFFT_1D;
@@ -10,6 +12,7 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -47,8 +50,8 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         return sampleRate;
     }
     
-    public long[] getFingerprintsForFile(String filename)
-            throws IOException, UnsupportedAudioFileException, InterruptedException {
+    public long[] getFingerprintsForFile(String filename, Long offsetSeconds, Long lengthSeconds)
+            throws IOException, UnsupportedAudioFileException {
         
         // if filename is not wav file, start by converting to 5512hz stereo wav file
         // if filename is on stdin, assume it conforms to assumption above.
@@ -66,13 +69,13 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
             Path tmpWavFile = WavConverter.inlineConvertToWav(filename, sampleRate);
             if (tmpWavFile != null) {
                 try {
-                    samples = readWavFile(tmpWavFile);
+                    samples = readWavFile(tmpWavFile, offsetSeconds, lengthSeconds);
                 } finally {
                     Files.deleteIfExists(tmpWavFile);
                 }
             }
         } else {
-            samples = readWavFile(Path.of(filename));
+            samples = readWavFile(Path.of(filename), offsetSeconds, lengthSeconds);
         }
         
         if (samples == null) {
@@ -91,24 +94,59 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     }
     
     
-    private static short[] readWavFile(Path tmpWaveFile) throws IOException, UnsupportedAudioFileException {
+    private static short[] readWavFile(Path tmpWaveFile, Long offsetSeconds, Long durationSeconds) throws IOException, UnsupportedAudioFileException {
         short[] samples;
         try (AudioInputStream as = AudioSystem.getAudioInputStream(tmpWaveFile.toFile())) {
-            samples = readChannel(as, 0);
-            log.debug("Read {} bytes from wav file {}", samples.length, tmpWaveFile);
+            int frameSize = as.getFormat().getFrameSize();
+            int numChannels = as.getFormat().getChannels();
+            boolean bigEndian = as.getFormat().isBigEndian();
+            float frameRate = as.getFormat().getFrameRate();
+            long lengthInFrames = as.getFrameLength();
+            float totalDurationSeconds = lengthInFrames / frameRate;
+            
+            float bytesPerSecond = frameSize * frameRate;
+    
+            long durationAsBytes;
+            long durationAsFrames;
+            if (durationSeconds != null && durationSeconds < totalDurationSeconds) {
+                durationAsBytes = (long) (bytesPerSecond * durationSeconds);
+                durationAsFrames = (long) Math.min(frameRate * durationSeconds, lengthInFrames);
+            } else {
+                durationAsBytes = lengthInFrames * frameSize;
+                durationAsFrames = lengthInFrames;
+            }
+            
+            if (offsetSeconds != null) {
+                long skipOffsets = (long) (bytesPerSecond * offsetSeconds);
+                IOUtils.skipFully(as, skipOffsets);
+            }
+    
+            try (final BoundedInputStream boundedInputStream = new BoundedInputStream(as, durationAsBytes)) {
+                samples = readChannel(boundedInputStream,
+                                      0,
+                                      frameSize,
+                                      numChannels,
+                                      bigEndian,
+                                      durationAsFrames);
+                log.debug("Read {} bytes from wav file {}", samples.length, tmpWaveFile);
+            }
         }
         return samples;
     }
     
-    private static short[] readChannel(AudioInputStream as, int _channel) throws IOException {
-        int singleSampleSize = as.getFormat().getFrameSize() / as.getFormat().getChannels();
-        short[] samples = new short[(int) (as.getFrameLength())];
-        boolean bigEndian = as.getFormat().isBigEndian();
-        byte[] sample = new byte[singleSampleSize * as.getFormat().getChannels()];
+    private static short[] readChannel(InputStream as,
+                                       int channelToRead,
+                                       int frameSize,
+                                       int numChannels,
+                                       boolean bigEndian,
+                                       long lengthInFrames) throws IOException {
+        int singleSampleSize = frameSize / numChannels;
+        short[] samples = new short[(int) lengthInFrames];
+        byte[] sample = new byte[singleSampleSize * numChannels];
         for (int i = 0; i < samples.length; i++) {
             int bytes_read = as.read(sample);
-            for (int j = 0; j < as.getFormat().getChannels(); j++) {
-                if (j == _channel) {
+            for (int j = 0; j < numChannels; j++) {
+                if (j == channelToRead) {
                     if (bigEndian) {
                         samples[i] = convertTwoBytesToShort(sample[j + 1], sample[j]);
                     } else {

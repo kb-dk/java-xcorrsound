@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface FingerprintStrategy {
     
-    long[] getFingerprintsForFile(String filename)
+    long[] getFingerprintsForFile(String filename, Long offsetSeconds, Long lengthSeconds)
             throws IOException, UnsupportedAudioFileException, InterruptedException;
     
     default int getFrameLength() {
