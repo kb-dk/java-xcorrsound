@@ -56,6 +56,7 @@ class FingerPrintDB16BitTest {
                                .getFile();
         StringWriter resultWriter = new StringWriter();
         List<IsmirSearchResult> results = ismir.query_scan(mp3file,
+                                                           null,null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         
         

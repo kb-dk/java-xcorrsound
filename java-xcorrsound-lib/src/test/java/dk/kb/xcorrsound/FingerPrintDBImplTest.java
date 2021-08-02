@@ -42,7 +42,7 @@ class FingerPrintDBImplTest {
     private File resetDB() throws IOException {
         File testDB = new File(DBFILE);
         FileUtils.deleteQuietly(testDB);
-        FileUtils.deleteQuietly(new File(DBFILE+".map"));
+        FileUtils.deleteQuietly(new File(DBFILE + ".map"));
         FileUtils.touch(testDB);
         return testDB;
     }
@@ -57,6 +57,8 @@ class FingerPrintDBImplTest {
                                .getFile();
         StringWriter resultWriter = new StringWriter();
         List<IsmirSearchResult> results = ismir.query_scan(mp3file,
+                                                           null,
+                                                           null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         
         
@@ -85,6 +87,7 @@ class FingerPrintDBImplTest {
                                       .getResource("mceinar_chunk1.mp3")
                                       .toURI());
         List<IsmirSearchResult> results = ismir.query_scan(mp3file.getAbsolutePath(),
+                                                           null, null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         for (IsmirSearchResult result : results) {
             System.out.println(result.toString());

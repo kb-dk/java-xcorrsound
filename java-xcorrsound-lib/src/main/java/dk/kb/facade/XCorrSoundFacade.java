@@ -22,7 +22,7 @@ public class XCorrSoundFacade {
      */
     public static long[] readFingerPrintFromFile(String fingerPrintFile) throws Exception {    
         //TODO avoid ArrayList and load directly in array. How to determine size?
-        ArrayList<Long>  fingerPrint = new ArrayList<Long>(); 
+        ArrayList<Long>  fingerPrint = new ArrayList<>();
 
         DataInputStream fin = new DataInputStream(IOUtils.buffer(new FileInputStream(fingerPrintFile)));        
         while(fin.available()>0) {        

@@ -11,7 +11,6 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,7 +29,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         super(frameLength, advance, sampleRate, bands);
     }
     
-    public List<IsmirSearchResult> query_scan(String queryFilename, double criteria)
+    public List<IsmirSearchResult> query_scan(String queryFilename, Long offsetSeconds, Long durationSeconds, double criteria)
             throws IOException, UnsupportedAudioFileException, InterruptedException {
         
         log.info("Starting query_scan for {}", queryFilename);
@@ -42,7 +41,7 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         
         //a.getSamplesForChannel(0, samples);
         
-        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(queryFilename, null, null);
+        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(queryFilename, offsetSeconds, durationSeconds);
         return query_scan(fingerprints, criteria);
     }
     
