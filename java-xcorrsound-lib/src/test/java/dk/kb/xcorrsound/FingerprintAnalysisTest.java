@@ -32,6 +32,7 @@ import java.util.function.UnaryOperator;
   Technical notes:
 
   1 fingerprint (32 significant bits) is created for each 11.62 milliseconds (86 fingerprints/second)
+  10 minutes ~= 51600 fingerprints
   1 hour ~= 300K fingerprints
   1 day ~= 7.4M fingerprints
   1 year = 2.7G fingerprints
@@ -89,7 +90,8 @@ public class FingerprintAnalysisTest {
         dumpStats(getCollapsed(fingerprints, fps ->  collapseEveryOther(fps, (first, second) -> first | second)));
 
         // Collapses halfs OR will have (guessing here) even more false positives than collapsed pairs
-        // as the collapsing happens for bits far apart
+        // as the collapsing happens for bits far apart. As with collapsed OR pairs, there are 0 false negatives,
+        // compared to raw
 
         System.out.println("*********************************************");
         System.out.println("Collapsed halfs OR signals (16 bits)");
@@ -150,6 +152,7 @@ public class FingerprintAnalysisTest {
                 uniques.add(fingerprint);
             }
         }
+        // Note: The "false negatives" refers to "ideal matching". Compared to raw matching, there are 0 false negatives
         System.out.println("Unique fingerprints (few=false positives, many=false negatives): " +
                            uniques.size() + "/" + collapsed.length);
         System.out.println("Unique bitcounts: " + uniqueCounts.size() + "/" + significantBits);
