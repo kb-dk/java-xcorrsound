@@ -29,10 +29,14 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
+ * Test the number of matches using raw fingerprint comparison vs. collapsed fingerprints, with different
+ * collapse strategies.
+ *
  *
  */
 public class FingerprintCollapseTest {
@@ -68,14 +72,23 @@ public class FingerprintCollapseTest {
 
     private void compareMatches(Map<String, long[]> recRaw, Map<String, char[]> recPOR, String source) {
         long[] hq = load(Path.of(getResource(source)));
-        log.info("Raw matches for '{}'", source);
+        log.info("Raw total matches for '{}'", source);
         recRaw.forEach((key, value) -> {
-            System.out.println(key + ": " + countMatching(hq, value));
+            log.info(key + ": " + countMatching(hq, value));
         });
+
         char[] hqPOR = collapsePairOR(hq);
-        log.info("Collapsed pair OR matches for '{}'", source);
+        log.info("Collapsed pair total OR matches for '{}'", source);
         recPOR.forEach((key, value) -> {
-            System.out.println(key + ": " + countMatching(hqPOR, value));
+            log.info(key + ": " + countMatching(hqPOR, value));
+        });
+
+        IntStream.of(5, 10, 15, 20, 25, 30, 35, 40, 35, 50).forEach(minMatches -> {
+            log.info("Collapsed pair OR sliding window matches with minMatches={} for '{}' with {} prints",
+                     minMatches, source, hqPOR.length);
+            recPOR.forEach((key, value) -> {
+                log.info(key + ": " + countMatching(hqPOR, value, minMatches));
+            });
         });
     }
 
@@ -101,6 +114,7 @@ public class FingerprintCollapseTest {
 
     }
 
+    // 64 bit fingerprints
     private long countMatching(long[] snippetPrints, long[] recordingPrints) {
         long matches = 0;
         for (long snippetPrint: snippetPrints) {
@@ -112,12 +126,38 @@ public class FingerprintCollapseTest {
         }
         return matches;
     }
+
+    // 16 bit fingerprints
     private long countMatching(char[] snippetPrints, char[] recordingPrints) {
         long matches = 0;
         for (long snippetPrint: snippetPrints) {
             for (long recordingPrint: recordingPrints) {
                 if (snippetPrint == recordingPrint) {
                     matches++;
+                }
+            }
+        }
+        return matches;
+    }
+
+    // 16 bit fingerprints
+
+    /**
+     * @param snippetPrints   fingerprints for the snippet.
+     * @param recordingPrints fingerprints for a full recording.
+     * @param minMatches      minimum number of matching fingerprints within the sliding window to register a full match.
+     * @return the number of full matches.
+     */
+    private long countMatching(char[] snippetPrints, char[] recordingPrints, int minMatches) {
+        long matches = 0;
+        for (int recOrigo = 0 ; recOrigo < recordingPrints.length ; recOrigo++) {
+            int innerMatches = 0;
+            for (int snipPos = 0 ; snipPos < snippetPrints.length && recOrigo + snipPos < recordingPrints.length ; snipPos++) {
+                if (recordingPrints[recOrigo+snipPos] == snippetPrints[snipPos]) {
+                    if (++innerMatches == minMatches) {
+                        matches++;
+                        break;
+                    }
                 }
             }
         }
