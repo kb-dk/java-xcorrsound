@@ -14,9 +14,6 @@
  */
 package dk.kb.xcorrsound.index;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -41,6 +38,12 @@ public class ChunkCounter {
         chunks.stream().forEach(chunkID -> ++counters[chunkID]);
     }
 
+    /**
+     * Find the topX counter entries with the highest number and translate the to recordings.
+     * Note that the same recording can be returned multiple times; for different chunks in the recording.
+     * @param topX the number of chunks to locate.
+     * @return topX matches in descending order.
+     */
     public List<Hit> getTopMatches(int topX) {
         long[] pairs = new long[counters.length];
         for (int chunkID = 0 ; chunkID < counters.length ; chunkID++) {
@@ -55,31 +58,53 @@ public class ChunkCounter {
             if (matches == 0) {
                 break;
             }
-            hits.add(new Hit(recordIDs.get(chunkID), chunkID, matches));
+            hits.add(new Hit(recordIDs.get(chunkID), chunkIDtoRecordChunk(chunkID), matches));
         }
         return hits;
     }
 
-    public class Hit {
+    /**
+     * @param globalChunkID the chunkID in the overall sequential chunk structure.
+     * @return the chunkID in the record that corresponds to the globalChunkID.
+     */
+    private int chunkIDtoRecordChunk(int globalChunkID) {
+        String recordID = recordIDs.get(globalChunkID);
+        int recordChunk = globalChunkID;
+        while (recordChunk > 0 && recordIDs.get(recordChunk-1).equals(recordID)) {
+            --recordChunk;
+        }
+        return globalChunkID-recordChunk;
+    }
+
+    public static class Hit {
         private final String recordingID;
-        // TODO: Add chunkID relative to the recording, instead of the absolute chunkID
-        private final int absoluteChunkID;
+        private final int recordingChunkID;
         private final int matches;
 
         public Hit(String recordingID, int chunkID, int matches) {
             this.recordingID = recordingID;
-            this.absoluteChunkID = chunkID;
+            this.recordingChunkID = chunkID;
             this.matches = matches;
         }
 
+        /**
+         * @return the recording ID, which should be the full file path.
+         */
         public String getRecordingID() {
             return recordingID;
         }
 
-        public int getAbsoluteChunkID() {
-            return absoluteChunkID;
+        /**
+         * @return the chunk in the recording that caused the match.
+         *         Chunks has length {@link ChunkMap16#getChunkLength()}.
+         */
+        public int getRecordingChunkID() {
+            return recordingChunkID;
         }
 
+        /**
+         * @return the number of matching fingerprints for the chunk that this Hit represents.
+         */
         public int getMatches() {
             return matches;
         }

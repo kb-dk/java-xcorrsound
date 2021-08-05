@@ -81,10 +81,6 @@ public class ChunkMap16 {
         }
     }
 
-    public ChunkIDs getMatchingChunksIDs(char fingerprint) {
-        return chunkIDMap[fingerprint];
-    }
-
     /**
      * Search all chunks for the given fingerprints and count the number of times any chunk has been matched with any
      * fingerprint.
@@ -99,7 +95,19 @@ public class ChunkMap16 {
         return counter;
     }
 
+    private ChunkIDs getMatchingChunksIDs(char fingerprint) {
+        return chunkIDMap[fingerprint];
+    }
+
     public int getNumChunks() {
         return recordIDs.size();
+    }
+
+    public int getChunkLength() {
+        return chunkLength;
+    }
+
+    public int getChunkOverlap() {
+        return chunkOverlap;
     }
 }
