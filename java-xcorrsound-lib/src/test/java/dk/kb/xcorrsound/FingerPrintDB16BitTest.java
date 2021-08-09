@@ -26,16 +26,17 @@ class FingerPrintDB16BitTest {
     
     @Test
     public void insert() throws IOException, UnsupportedAudioFileException, InterruptedException {
-        
-        FingerprintDBIndexer ismir = new FingerprintDBIndexer(2048, 64, 5512, 16);
+    
         File testDB = resetDB();
+        FingerprintDBIndexer ismir = new FingerprintDBIndexer(2048, 64, 5512, 16, DBFILE);
+    
+            String mp3file = Thread.currentThread()
+                                   .getContextClassLoader()
+                                   .getResource("clip_P3_1400_1600_040806_001-java.mp3")
+                                   .getFile();
+            ismir.insert(mp3file, "testFile");
+    
         
-        ismir.open(DBFILE);
-        String mp3file = Thread.currentThread()
-                               .getContextClassLoader()
-                               .getResource("clip_P3_1400_1600_040806_001-java.mp3")
-                               .getFile();
-        ismir.insert(mp3file, "testFile");
     }
     
     private File resetDB() throws IOException {
@@ -48,26 +49,23 @@ class FingerPrintDB16BitTest {
     
     @Test
     public void query() throws UnsupportedAudioFileException, InterruptedException, IOException {
-        FingerprintDBSearcher ismir = new FingerprintDBSearcher(2048, 64, 5512, 16);
-        ismir.open(DBFILE);
-        String mp3file = Thread.currentThread()
-                               .getContextClassLoader()
-                               .getResource("chunck1.mp3")
-                               .getFile();
-        StringWriter resultWriter = new StringWriter();
+        FingerprintDBSearcher ismir = new FingerprintDBSearcher(2048, 64, 5512, 16, DBFILE);
+        
+            String mp3file = Thread.currentThread()
+                                   .getContextClassLoader()
+                                   .getResource("chunck1.mp3")
+                                   .getFile();
+    
         List<IsmirSearchResult> results = ismir.query_scan(mp3file,
-                                                           null,null,
+                                                           null, null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         
-        
+    
         assertThat(results,
                    hasItem(
                            allOf(
                                    hasProperty("dist", equalTo(79)),
                                    hasProperty("posInIndex", equalTo(20109)))));
-        //Matchers.containsString("at 00:03:53 with distance 363"));
-        //dist 79 if only using 16 bands
-        System.out.println(resultWriter);
     }
     
     

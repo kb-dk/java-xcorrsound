@@ -10,41 +10,41 @@ import dk.kb.facade.XCorrSoundFacade;
 
 
 /*
- * This test will check if java implementation of the Ishmir algorithm 
+ * This test will check if java implementation of the Ishmir algorithm
  * produces same results at the original C++.
  */
 public class JavaIshmirImplTest {
 
     
     /*
-     * Will test a fingerprint generated with original C++ code can is generated 
-     * identical with the java-implementation.  
-     * 
+     * Will test a fingerprint generated with original C++ code can is generated
+     * identical with the java-implementation.
+     *
      */
     @Test
     void testIdenticalFingerPrint() throws Exception {
         
         //Generate a new fingerprint with java
         String soundChunk = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3").getFile();
-                        
-        long[] fingerPrintsForFile = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunk);
         
-        //Load fingerprint generated with C++ for same file;       
+        int[] fingerPrintsForFile = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunk);
         
-        String fingerPrintOrgFile = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1_org.fingerprint").getFile();         
+        //Load fingerprint generated with C++ for same file;
         
-        long[] fingerPrintOrg = XCorrSoundFacade.readFingerPrintFromFile(fingerPrintOrgFile);
+        String fingerPrintOrgFile = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1_org.fingerprint").getFile();
+        
+        int[] fingerPrintOrg = XCorrSoundFacade.readFingerPrintFromFile(fingerPrintOrgFile);
         
         assertEquals(fingerPrintOrg.length,fingerPrintsForFile.length,"Finger print not matching, different file sizes");
-                
+        
         for (int i =0;i<fingerPrintOrg.length;i++) {
             assertEquals(fingerPrintOrg[i], fingerPrintsForFile[i]);
-        }        
-        //Test with wave-file. (no ffmpeg conversion)        
+        }
+        //Test with wave-file. (no ffmpeg conversion)
         String soundChunkWave = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3.wav").getFile();
-                 
         
-        long[] fingerPrintsForFileWave = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunkWave);
+        
+        int[] fingerPrintsForFileWave = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunkWave);
         
         for (int i =0;i<fingerPrintOrg.length;i++) {
             assertEquals(fingerPrintOrg[i], fingerPrintsForFileWave[i]);
@@ -54,9 +54,9 @@ public class JavaIshmirImplTest {
 
     @Test
     void FingerPrintPerformanceTest() throws Exception {
-                               
+        
         String soundChunkWave = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3.wav").getFile();
-         
+        
         int maxRuns=100;
         long start=System.currentTimeMillis();
         for (int i =0;i<maxRuns;i++) {
