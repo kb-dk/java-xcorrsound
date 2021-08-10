@@ -33,6 +33,7 @@ import java.util.List;
  *
  * This implementation is not thread safe.
  * TODO: Make the implementation thread safe so that recordings can be added while lookups are performed
+ * FIXME: The last chunk for a recording might be very small, resulting is a high relative match rate
  */
 public class ChunkMap16 {
     private static final Logger log = LoggerFactory.getLogger(ChunkMap16.class);
@@ -90,9 +91,27 @@ public class ChunkMap16 {
      * @return a counter for all chunk matches.
      */
     public ChunkCounter countMatches(char[] fingerprints) {
-        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordIDs);
+        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordIDs, chunkLength, chunkOverlap);
         for (char fingerprint: fingerprints) {
             counter.add(getMatchingChunksIDs(fingerprint));
+        }
+        return counter;
+    }
+
+    /**
+     * Search all chunks for a subset of the given fingerprints and count the number of times any chunk has been
+     * matched with any fingerprint from the subset.
+     * @param fingerprints fingerprints for a snippet.
+     * @param areaStart the start of the area of fingerprints to search. Inclusive.
+     * @param areaEnd the end of the area of fingerprints to search. Exclusive.
+     *                If areaEnd larger than the number of fingerprints, it is set to the number of fingerprints.
+     * @return a counter for all chunk matches.
+     */
+    public ChunkCounter countMatches(char[] fingerprints, int areaStart, int areaEnd) {
+        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordIDs, chunkLength, chunkOverlap);
+        areaEnd = Math.min(areaEnd, fingerprints.length);
+        for (int index = areaStart ; index < areaEnd ; index++) {
+            counter.add(getMatchingChunksIDs(fingerprints[index]));
         }
         return counter;
     }

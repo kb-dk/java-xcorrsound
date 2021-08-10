@@ -26,6 +26,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -114,6 +116,51 @@ public class CollapsedDiscovery {
                      collapsed.length, chunkMap.getChunkOverlap());
         }
         return chunkMap.countMatches(collapsed).getTopMatches(topX);
+    }
+
+    /**
+     * Uses the index structure for fast lookup for candidates. It is recommended to make a second pass of the returned
+     * hits using Hamming distance or similar higher quality similarity calculation.
+     *
+     * The input snippet is fingerprinted and the fingerprints divided into chunks before searching.
+     * @param snippetPath the path to a sound snippet.
+     *                    This should not result in more fingerprints than the chunkLength in {@link ChunkMap16}.
+     * @param topX the number of hits to return.
+     * @param preSkip the number of fingerprint to skip at the start of the fingerprints from the snipper. Inclusive.
+     * @param postSkip the number of fingerprint to skip at the end of the fingerprints from the snipper. Exclusive.
+     * @param chunkLength the chunk length for
+     * @return the closes matches in descending order for each chunk of snippet fingerprints, starting from chunk 0.
+     * @throws IOException if it was not possible to generate fingerprints from snippetPath.
+     */
+    public List<List<ChunkCounter.Hit>> findCandidates(
+            String snippetPath, int topX, int preSkip, int postSkip, int chunkLength, int chunkOverlap)
+            throws IOException {
+        long[] rawPrints = getRawPrints(Path.of(snippetPath));
+        char[] collapsed = collapsor.getCollapsed(rawPrints);
+
+        if (preSkip + postSkip >= collapsed.length) {
+            log.warn("preSkip={} + postSkip={} >= numSnippets={}. Empty result list returned",
+                     preSkip, postSkip, collapsed.length);
+            return Collections.emptyList();
+        }
+
+        int numChunks = (collapsed.length-preSkip-postSkip) / chunkLength;
+        if (numChunks*chunkLength < (collapsed.length-preSkip-postSkip)) {
+            numChunks++;
+        }
+
+        List<List<ChunkCounter.Hit>> chunkResults = new ArrayList<>(numChunks);
+        for (int chunk = 0 ; chunk < numChunks ; chunk++) {
+            int start = preSkip + chunk*chunkLength;
+            int end = Math.min(start + chunkLength + chunkOverlap, collapsed.length-postSkip);
+            chunkResults.add(chunkMap.countMatches(collapsed, start, end).getTopMatches(topX));
+        }
+        return chunkResults;
+/*        if (collapsed.length > chunkMap.getChunkOverlap()) {
+            log.warn("Attempting search for snippet with {} fingerprints with a setup where the overlap between " +
+                     "chunks is only {} fingerprints. This increases the probability of false negatives",
+                     collapsed.length, chunkMap.getChunkOverlap());
+        }*/
     }
 
     long[] getRawPrints(final Path source) throws IOException {

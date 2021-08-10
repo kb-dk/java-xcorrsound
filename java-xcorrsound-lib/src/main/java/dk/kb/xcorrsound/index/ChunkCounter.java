@@ -17,6 +17,7 @@ package dk.kb.xcorrsound.index;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Keeps track of the number of matches for the individual chunks.
@@ -28,10 +29,17 @@ public class ChunkCounter {
     private final int[] counters;
     private final int numChunks;
 
-    public ChunkCounter(int numChunks, List<String> recordIDs) {
+    // Length & overlap needed for calculating absolute fingerprint offsets in the recordings.
+    private final int chunkLength;
+    private final int chunkOverlap;
+
+    public ChunkCounter(int numChunks, List<String> recordIDs, int chunkLength, int chunkOverlap) {
         this.numChunks = numChunks;
         this.counters = new int[numChunks];
         this.recordIDs = recordIDs;
+
+        this.chunkLength = chunkLength;
+        this.chunkOverlap = chunkOverlap;
     }
 
     /**
@@ -62,7 +70,10 @@ public class ChunkCounter {
             if (matches == 0) {
                 break;
             }
-            hits.add(new Hit(recordIDs.get(chunkID), chunkIDtoRecordChunk(chunkID), matches));
+            int recordChunkID = chunkIDtoRecordChunk(chunkID);
+            int matchAreaStart = recordChunkID*chunkLength;
+            int matchAreaEnd = matchAreaStart + chunkLength + chunkOverlap;
+            hits.add(new Hit(recordIDs.get(chunkID), recordChunkID, matchAreaStart, matchAreaEnd, matches));
         }
         return hits;
     }
@@ -81,14 +92,22 @@ public class ChunkCounter {
     }
 
     public static class Hit {
+        private final double MS_PER_FINGERPRINT = 11.62; // TODO: Get the exact value
         private final String recordingID;
         private final int recordingChunkID;
         private final int matches;
+        private final int matchAreaStartFingerprint; // Inclusive
+        private final int matchAreaEndFingerprint; // Exclusive
+        private final double matchAreaStartSeconds;
 
-        public Hit(String recordingID, int chunkID, int matches) {
+        public Hit(String recordingID, int chunkID,
+                   int matchAreaStartFingerprint, int matchAreaEndFingerprint, int matches) {
             this.recordingID = recordingID;
             this.recordingChunkID = chunkID;
             this.matches = matches;
+            this.matchAreaStartFingerprint = matchAreaStartFingerprint;
+            this.matchAreaEndFingerprint = matchAreaEndFingerprint;
+            this.matchAreaStartSeconds = matchAreaStartFingerprint * MS_PER_FINGERPRINT / 1000.0;
         }
 
         /**
@@ -101,9 +120,39 @@ public class ChunkCounter {
         /**
          * @return the chunk in the recording that caused the match.
          *         Chunks has length {@link ChunkMap16#getChunkLength()}.
+         *          Note that the matching area has size chunkLength + {@link ChunkMap16#getChunkOverlap()}.
+         * @see #getMatchAreaStartFingerprint()
+         * @see #getMatchAreaEndFingerprint()
          */
         public int getRecordingChunkID() {
             return recordingChunkID;
+        }
+
+        /**
+         * @return the start of the range of fingerprints in the recording where the matched occurred. Inclusive.
+         */
+        public int getMatchAreaStartFingerprint() {
+            return matchAreaStartFingerprint;
+        }
+
+        /**
+         * @return the end of the range of fingerprints in the recording where the matched occurred. Exclusive.
+         */
+        public int getMatchAreaEndFingerprint() {
+            return matchAreaEndFingerprint;
+        }
+
+        public double getMatchAreaStartSeconds() {
+            return matchAreaStartSeconds;
+        }
+
+        private String getMatchAreaStartHumanTime() {
+            double seconds = matchAreaStartSeconds;
+            int hours = (int) (seconds / (60 * 60));
+            seconds -= hours * 60 * 60;
+            int minutes = (int) (seconds / 60);
+            seconds -= minutes * 60;
+            return String.format(Locale.ROOT, "%03d:%02d:%02.1f", hours, minutes, seconds);
         }
 
         /**
@@ -118,8 +167,12 @@ public class ChunkCounter {
             return "Hit{" +
                    "recordingID='" + recordingID + '\'' +
                    ", recordingChunkID=" + recordingChunkID +
+                   ", matchAreaStart=" + getMatchAreaStartHumanTime() +
+                   ", matchAreaStartFP=" + matchAreaStartFingerprint +
+                   ", matchAreaEndFP=" + matchAreaEndFingerprint +
                    ", matches=" + matches +
                    '}';
         }
+
     }
 }

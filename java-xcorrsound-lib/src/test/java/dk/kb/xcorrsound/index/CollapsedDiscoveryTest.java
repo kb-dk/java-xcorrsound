@@ -58,17 +58,18 @@ class CollapsedDiscoveryTest {
 
     @Test
     void countCollapseMatches() throws IOException {
+        final int MIN_LENGTH = 4;
         for (String snippet: Arrays.asList(
                 getResource(X_SOURCE_HQ),
                 getResource(X_SOURCE_LQ),
                 getResource(B_SOURCE)
         )) {
             System.out.println("*******************************************************************************");
-            countCollapseMatches(snippet);
+            countCollapseMatches(snippet, 2);
         }
     }
 
-    private void countCollapseMatches(String snippet) throws IOException {
+    private void countCollapseMatches(String snippet, int minLength) throws IOException {
         final String[] RECORDINGS = new String[]{
                 X_ROOT + "P3_1400_1600_891224_001.mp3",
                 X_ROOT + "P3_0600_0800_890110_001.mp3",
@@ -84,9 +85,9 @@ class CollapsedDiscoveryTest {
         for (Collapsor.COLLAPSE_STRATEGY strategy: Collapsor.COLLAPSE_STRATEGY.values()) {
             List<int[]> matches = new ArrayList<int[]>();
             for (String recording: RECORDINGS) { // Separate calculation from output to avoid log output mess
-                matches.add(countTotalMatches(recording, snippet, strategy));
+                matches.add(countTotalMatches(recording, snippet, minLength, strategy));
             }
-            System.out.println("\nFor snippet " + snippet + " with strategy " + strategy);
+            System.out.println("\nFor snippet " + snippet + " with strategy " + strategy + " and minLength " + minLength);
             for (int i = 0 ; i< RECORDINGS.length ; i++) {
                 String recording = RECORDINGS[i];
                 System.out.printf(Locale.ROOT,
@@ -155,7 +156,7 @@ class CollapsedDiscoveryTest {
         return s;
     }
 
-    private int[] countTotalMatches(String recordingPath, String snippetPath, Collapsor.COLLAPSE_STRATEGY strategy) throws IOException {
+    private int[] countTotalMatches(String recordingPath, String snippetPath, int minLength, Collapsor.COLLAPSE_STRATEGY strategy) throws IOException {
         CollapsedDiscovery cd = new CollapsedDiscovery(1000, 100, strategy);
         long[] rRaw = cd.getRawPrints(Path.of(recordingPath));
         char[] rCollapsed = cd.collapsor.getCollapsed(rRaw);
@@ -170,12 +171,17 @@ class CollapsedDiscoveryTest {
                 }
             }
         }
+
         int collapsedMatches = 0;
-        for (char sPrint: sCollapsed) {
-            for (char rPrint: rCollapsed) {
-                if (sPrint == rPrint) {
-                    collapsedMatches++;
+        for (int s = 0; s < sCollapsed.length-minLength+1; s++) {
+            rLoop:
+            for (int r = 0; r < rCollapsed.length-minLength+1; r++) {
+                for (int o = 0 ; o < minLength ; o++) {
+                    if (sCollapsed[s+o] != rCollapsed[r+o]) {
+                        continue rLoop;
+                    }
                 }
+                collapsedMatches++;
             }
         }
         return new int[]{rawMatches, collapsedMatches};
@@ -183,14 +189,20 @@ class CollapsedDiscoveryTest {
 
     @Test
     void basicTestX() throws IOException {
-        CollapsedDiscovery cd = new CollapsedDiscovery(10000, 2000, Collapsor.COLLAPSE_STRATEGY.or_pairs_16);
+        final int TOP_X = 30;
+        final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
+        final int CHUNK_LENGTH = 2000;
+        final int CHUNK_OVERLAP = 2000;
+
+
+        CollapsedDiscovery cd = new CollapsedDiscovery(CHUNK_LENGTH, CHUNK_OVERLAP, STRATEGY);
         addRecordings(cd, X_ROOT, X_MATCHING);
         addRecordings(cd, B_ROOT, B_MATCHING);
 
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
-        top(cd, X_SOURCE_HQ, 10);
-        top(cd, X_SOURCE_LQ, 10);
-        top(cd, B_SOURCE, 10);
+        top(cd, X_SOURCE_HQ, TOP_X);
+        top(cd, X_SOURCE_LQ, TOP_X);
+        top(cd, B_SOURCE, TOP_X);
     }
 
     private void top(CollapsedDiscovery cd, String snippet, int topX) throws IOException {
@@ -199,7 +211,43 @@ class CollapsedDiscoveryTest {
         hqHits.forEach(System.out::println);
     }
 
-    void addRecordings(CollapsedDiscovery cd, String root, String[] instances) throws IOException {
+    @Test
+    void chunkedFind() throws IOException {
+        final int TOP_X = 200;
+        final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
+
+        final int R_CHUNK_LENGTH = 2000;
+        final int R_CHUNK_OVERLAP = 2000;
+
+        final int S_CHUNK_LENGTH = 2000;
+        final int S_CHUNK_OVERLAP = 0;
+
+        CollapsedDiscovery cd = new CollapsedDiscovery(R_CHUNK_LENGTH, R_CHUNK_OVERLAP, STRATEGY);
+        addRecordings(cd, X_ROOT, X_MATCHING);
+        addRecordings(cd, B_ROOT, B_MATCHING);
+
+        System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
+        topChunked(cd, X_SOURCE_HQ, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, X_SOURCE_LQ, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, B_SOURCE, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+    }
+
+    private void topChunked(CollapsedDiscovery cd, String snippet, int topX, int sChunkLength, int sChunkOverlap) throws IOException {
+        final int PRE_SKIP = 50;
+        final int POST_SKIP = 50;
+
+        List<List<ChunkCounter.Hit>> chunkHits =
+                cd.findCandidates(getResource(snippet), topX, PRE_SKIP, POST_SKIP, sChunkLength, sChunkOverlap);
+        long[] snippetPrints = cd.getRawPrints(Path.of(getResource(snippet)));
+        System.out.println("*** Hits for " + snippet + " with " + snippetPrints.length + " prints");
+        for (int i = 0 ; i < chunkHits.size() ; i++) {
+            System.out.println("chunk " + i);
+            chunkHits.get(i).forEach(System.out::println);
+        }
+    }
+
+
+    void addRecordings(CollapsedDiscovery cd, String root, String[] instances)  {
         Arrays.stream(instances)
                 .map(s -> root + s)
                 .forEach(rec -> {
