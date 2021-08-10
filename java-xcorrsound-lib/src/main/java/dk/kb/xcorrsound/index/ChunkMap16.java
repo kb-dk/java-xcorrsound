@@ -31,6 +31,8 @@ import java.util.List;
  * The method {@link #getMatchingChunksIDs(char)} returns a bitmap of the chunks containing at least one instance of the
  * given fingerprint. The bits in the bitmap corresponds to the chunks-IDs.
  *
+ * This implementation is not thread safe.
+ * TODO: Make the implementation thread safe so that recordings can be added while lookups are performed
  */
 public class ChunkMap16 {
     private static final Logger log = LoggerFactory.getLogger(ChunkMap16.class);
@@ -50,7 +52,7 @@ public class ChunkMap16 {
     public ChunkMap16(int chunkLength, int chunkOverlap, int initialChunkCount) {
         this.chunkLength = chunkLength;
         this.chunkOverlap = chunkOverlap;
-        for (int i = 0 ; i < initialChunkCount ; i++) {
+        for (int i = 0 ; i < 65536 ; i++) {
             chunkIDMap[i] = new ChunkIDs(initialChunkCount);
         }
     }
@@ -64,7 +66,7 @@ public class ChunkMap16 {
         recordingID = recordingID.intern();
 
         // Ensure there is room in the structures
-        int totalChunks = getNumChunks() +  fingerprints.length / chunkLength + 1;
+        int totalChunks = getNumChunks() + fingerprints.length / chunkLength + 1;
         if (chunkIDMap[0].extend(totalChunks)) {
             Arrays.stream(chunkIDMap).forEach(chunkIDs -> chunkIDs.extend(totalChunks));
         }
@@ -88,16 +90,17 @@ public class ChunkMap16 {
      * @return a counter for all chunk matches.
      */
     public ChunkCounter countMatches(char[] fingerprints) {
-        ChunkCounter counter = new ChunkCounter(chunkIDMap[0].getBitmap().length, recordIDs);
+        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordIDs);
         for (char fingerprint: fingerprints) {
             counter.add(getMatchingChunksIDs(fingerprint));
         }
         return counter;
     }
 
-    private ChunkIDs getMatchingChunksIDs(char fingerprint) {
+    public ChunkIDs getMatchingChunksIDs(char fingerprint) {
         return chunkIDMap[fingerprint];
     }
+
 
     public int getNumChunks() {
         return recordIDs.size();

@@ -22,15 +22,18 @@ import java.util.stream.IntStream;
 
 /**
  * Bitmap representation of matched chunks.
+ *
+ * The structure supports extension to hold any given positive chunkID.
+ * It is not sparse, so a single entry with a chunkID of 2 billion will take up 512MB of RAM.
+ *
+ * This implementation is not thread safe.
  */
 public class ChunkIDs {
     private long[] bitmap;
-
-    public ChunkIDs(long[] bitmap) {
-        this.bitmap = bitmap;
-    }
+    private int numChunks;
 
     public ChunkIDs(int numChunks) {
+        this.numChunks = numChunks;
         bitmap = new long[getNeededLongs(numChunks)];
     }
 
@@ -57,7 +60,7 @@ public class ChunkIDs {
     public void set(int chunkID) {
         final int o = chunkID >>> 6;
         final int shift = chunkID & 63;
-        bitmap[o] = (bitmap[o] & ~(1L << shift)) | (1 << shift);
+        bitmap[o] = (bitmap[o] & ~(1L << shift)) | (1L << shift);
     }
 
     public long get(int chunkID) {
@@ -93,7 +96,7 @@ public class ChunkIDs {
 
     private int getNeededLongs(int numChunks) {
         int longs = numChunks / 64;
-        if (longs * 64 < numChunks) {
+        if (longs * 64 < numChunks || longs == 0) {
             ++longs;
         }
         return longs;

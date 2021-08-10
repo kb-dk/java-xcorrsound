@@ -22,15 +22,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.LongUnaryOperator;
-import java.util.function.UnaryOperator;
-import java.util.stream.IntStream;
 
 /**
  * Uses collapsed fingerprints for discovery of sound snippets.
@@ -48,7 +44,7 @@ import java.util.stream.IntStream;
  * Note that this is a fairly coarse matching due to the collapsing step. For a higher quality result, post-processing
  * of the result set should be performed.
  *
- * Memory usage is 8KB/chunk of recording. With 10 minute chunks that is ~ 1MB/day of recording.
+ * Memory usage is 8KB/chunk of recording. With 10 minute chunks that is ~1MB/day of recording.
  *
  * Performance is O(#totalChunks). Currently processing is single threaded.
  * Shifting to a threaded model is fairly easy and the speedup will be near-linear, modulo CPU cache size limits.
@@ -56,30 +52,16 @@ import java.util.stream.IntStream;
 public class CollapsedDiscovery {
     private static final Logger log = LoggerFactory.getLogger(CollapsedDiscovery.class);
 
-    public enum COLLAPSE_STRATEGY {
-        /**
-         * Collapses 32 bit down to 16 bit by ORing the bits pair wise.
-         * This strategy has slower indexing than or_half_16, but is more representative if bits close to each other are
-         * related to each other, e.g. if they represent spikes in frequency bands next to each other.
-         */
-        or_pairs_16,
-        /**
-         * Collapses 32 bit down to 16 bit by ORing the first 16 bits with the last 16 bits.
-         * This strategy is very fast for indexing, but is a poor reduction if bits that are close to each other are
-         * related. If bits in close proximity are not related, this strategy is preferable due to speed.
-         */
-        or_half_16
-    };
+    ;
 
-    public static final COLLAPSE_STRATEGY COLLAPSE_STRATEGY_DEFAULT = COLLAPSE_STRATEGY.or_pairs_16;
     public static final int CHUNK_LENGTH_DEFAULT = 51600; // 10 minutes
     public static final int CHUNK_OVERLAP_DEFAULT = 1000; // 10 seconds
 
-    private COLLAPSE_STRATEGY collapseStrategy;
-    private ChunkMap16 chunkMap;
+    ChunkMap16 chunkMap;
+    Collapsor collapsor;
 
     public CollapsedDiscovery() {
-        this(CHUNK_LENGTH_DEFAULT, CHUNK_OVERLAP_DEFAULT, COLLAPSE_STRATEGY_DEFAULT);
+        this(CHUNK_LENGTH_DEFAULT, CHUNK_OVERLAP_DEFAULT, Collapsor.COLLAPSE_STRATEGY_DEFAULT);
     }
 
     /**
@@ -91,15 +73,14 @@ public class CollapsedDiscovery {
      *                     snippet to ensure full match.
      * @param collapseStrategy how to reduce the 32 bit fingerprints to at most 16 bits.
      */
-    public CollapsedDiscovery(int chunkLength, int chunkOverlap, COLLAPSE_STRATEGY collapseStrategy) {
-        this.collapseStrategy = collapseStrategy;
+    public CollapsedDiscovery(int chunkLength, int chunkOverlap, Collapsor.COLLAPSE_STRATEGY collapseStrategy) {
+        collapsor = new Collapsor(collapseStrategy);
         chunkMap = new ChunkMap16(chunkLength, chunkOverlap);
     }
 
     /**
-     * Generate raw fingerprints for the given recording, collapse the fingerprints using {@link #collapseStrategy}
-     * and update the lookup structures with the result. After this the recording can be searched using
-     * {@link #findCandidates(String, int)}.
+     * Generate raw fingerprints for the given recording, collapse the fingerprints to 16 bit and update the lookup
+     * structures with the result. After this the recording can be searched using {@link #findCandidates(String, int)}.
      *
      * Multiple additions of the same recording will result in duplicate entries.
      * The fingerprints will be cached on storage.
@@ -108,27 +89,11 @@ public class CollapsedDiscovery {
      */
     public void addRecording(String recordingPath) throws IOException {
         long[] rawPrints = getRawPrints(Path.of(recordingPath));
-        char[] collapsed = getCollapsed(rawPrints);
+        char[] collapsed = collapsor.getCollapsed(rawPrints);
         chunkMap.addRecording(recordingPath, collapsed);
         log.debug("Added recording '" + recordingPath + "' with " + collapsed.length + " fingerprints");
     }
 
-    private char[] getCollapsed(long[] rawPrints) {
-        char[] collapsed;
-        switch (collapseStrategy) {
-            case or_pairs_16:
-                collapsed = toChar(collapseTo16(rawPrints, fps ->
-                        collapseEveryOther(fps, (first, second) -> first | second)));
-                break;
-            case or_half_16:
-                collapsed = toChar(collapseTo16(rawPrints, fps ->
-                        collapseHalf(fps, (first, second) -> first | second)));
-                break;
-            default: throw new UnsupportedOperationException(
-                    "The COLLAPSE_STRATEGY '" + collapseStrategy + "' is currently not supported");
-        }
-        return collapsed;
-    }
 
     /**
      * Uses the index structure for fast lookup for candidates. It is recommended to make a second pass of the returned
@@ -141,7 +106,8 @@ public class CollapsedDiscovery {
      */
     public List<ChunkCounter.Hit> findCandidates(String snippetPath, int topX) throws IOException {
         long[] rawPrints = getRawPrints(Path.of(snippetPath));
-        char[] collapsed = getCollapsed(rawPrints);
+        char[] collapsed = collapsor.getCollapsed(rawPrints);
+
         if (collapsed.length > chunkMap.getChunkOverlap()) {
             log.warn("Attempting search for snippet with {} fingerprints with a setup where the overlap between " +
                      "chunks is only {} fingerprints. This increases the probability of false negatives",
@@ -150,61 +116,10 @@ public class CollapsedDiscovery {
         return chunkMap.countMatches(collapsed).getTopMatches(topX);
     }
 
-    /**
-     * Process all rawPrints one at a time using the reducer.
-     * @param rawPrints 32 bit significant fingerprint.
-     * @param collapsor reduces a single 32 bit significant input to 16 significant bits.
-     * @return rawPrints collapsed to 16 bit representations.
-     */
-    public static long[] collapseTo16(long[] rawPrints, LongUnaryOperator collapsor) {
-        return Arrays.stream(rawPrints).map(collapsor).toArray();
-    }
-
-    /**
-     * Processes bits in pairs by creating 2 16 bit values from 1 32 bit input (the upper 32 bits from the fingerprint
-     * are discarded) by concatenating every other bit for value 1 and every other bit, offset by 1, for value 2.
-     * After that the bitJoiner is applied to the two values and the result is returned.
-     * @param fingerprint a fingerprint with 32 bit significant values.
-     * @param bitJoiner   takes 2 bitsets (16 significant bits), joins them and returns the resulting bits.
-     * @return
-     */
-    static long collapseEveryOther(long fingerprint, LongBiFunction bitJoiner) {
-        long a = 0L;
-        long b = 0L;
-        for (int i = 0 ; i < 16 ; i++) {
-            a |= ((fingerprint >>> (31 - i * 2)) & 0x1) << (15 - i);
-            b |= ((fingerprint >>> (31 - i * 2 - 1)) & 0x1) << (15 - i);
+    long[] getRawPrints(final Path source) throws IOException {
+        if (!Files.exists(source)) {
+            throw new FileNotFoundException("The file '" + source + "' does not exist");
         }
-        return bitJoiner.apply(a, b);
-    }
-
-    /**
-     * Processes bits in parallel matching first half and second half of the fingerprint.
-     * Bits are represented at the last position of Longs.
-     * @param fingerprint a fingerprint with 32 bit significant values.
-     * @param bitJoiner   takes 2 bitsets (16 significant bits), joins them and returns the resulting bits.
-     * @return
-     */
-    static long collapseHalf(long fingerprint, LongBiFunction bitJoiner) {
-        long a = fingerprint >> 16;
-        long b = fingerprint & 0xFFFF;
-        return bitJoiner.apply(a, b);
-    }
-
-    /**
-     * Convert all values to char (least significant 16 bits).
-     * @param values a long array.
-     * @return a char array of the same length as the input, containing the 16 least significant bit of all values.
-     */
-    private char[] toChar(long[] values) {
-        char[] cs = new char[values.length];
-        for (int i = 0 ; i < values.length ; i++) {
-            cs[i] = (char)values[i];
-        }
-        return cs;
-    }
-
-    private long[] getRawPrints(final Path source) throws IOException {
         final Path processedSource = source.toString().endsWith("mp3") || source.toString().endsWith("wav") ?
                 getRawPrintsPath(source.toString()) :
                 source;
@@ -220,10 +135,11 @@ public class CollapsedDiscovery {
         }
 
         try {
-            int numPrints = (int) (Files.size(source) / 4); // 32 bits/fingerprint
+            int numPrints = (int) (Files.size(processedSource) / 4); // 32 bits/fingerprint
             long[] fingerprints = new long[numPrints];
-            log.info("Loading {} fingerprints from '{}'", numPrints, source);
-            try (DataInputStream of = new DataInputStream(IOUtils.buffer(FileUtils.openInputStream(source.toFile())))) {
+            log.debug("Loading {} fingerprints from '{}'", numPrints, processedSource);
+            try (DataInputStream of = new DataInputStream(IOUtils.buffer(
+                    FileUtils.openInputStream(processedSource.toFile())))) {
                 for (int i = 0; i < numPrints; i++) {
                     fingerprints[i] = Integer.toUnsignedLong(Integer.reverseBytes(of.readInt()));
                 }

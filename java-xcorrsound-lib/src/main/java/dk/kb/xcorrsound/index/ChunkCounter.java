@@ -20,12 +20,16 @@ import java.util.List;
 
 /**
  * Keeps track of the number of matches for the individual chunks.
+ *
+ * This implementation is not thread safe.
  */
 public class ChunkCounter {
     private final List<String> recordIDs; // Needed for construction of Hits in {@link #getTopMatches}
     private final int[] counters;
+    private final int numChunks;
 
     public ChunkCounter(int numChunks, List<String> recordIDs) {
+        this.numChunks = numChunks;
         this.counters = new int[numChunks];
         this.recordIDs = recordIDs;
     }
@@ -107,6 +111,15 @@ public class ChunkCounter {
          */
         public int getMatches() {
             return matches;
+        }
+
+        @Override
+        public String toString() {
+            return "Hit{" +
+                   "recordingID='" + recordingID + '\'' +
+                   ", recordingChunkID=" + recordingChunkID +
+                   ", matches=" + matches +
+                   '}';
         }
     }
 }
