@@ -25,6 +25,9 @@ import java.util.Locale;
  * This implementation is not thread safe.
  */
 public class ChunkCounter {
+
+    public static final double MS_PER_FINGERPRINT = 11.62; // TODO: Get the exact value
+
     private final List<String> recordIDs; // Needed for construction of Hits in {@link #getTopMatches}
     private final int[] counters;
     private final int numChunks;
@@ -92,7 +95,6 @@ public class ChunkCounter {
     }
 
     public static class Hit {
-        private final double MS_PER_FINGERPRINT = 11.62; // TODO: Get the exact value
         private final String recordingID;
         private final int recordingChunkID;
         private final int matches;
@@ -107,7 +109,7 @@ public class ChunkCounter {
             this.matches = matches;
             this.matchAreaStartFingerprint = matchAreaStartFingerprint;
             this.matchAreaEndFingerprint = matchAreaEndFingerprint;
-            this.matchAreaStartSeconds = matchAreaStartFingerprint * MS_PER_FINGERPRINT / 1000.0;
+            this.matchAreaStartSeconds = matchAreaStartFingerprint * ChunkCounter.MS_PER_FINGERPRINT / 1000.0;
         }
 
         /**
@@ -152,7 +154,7 @@ public class ChunkCounter {
             seconds -= hours * 60 * 60;
             int minutes = (int) (seconds / 60);
             seconds -= minutes * 60;
-            return String.format(Locale.ROOT, "%03d:%02d:%02.1f", hours, minutes, seconds);
+            return String.format(Locale.ROOT, "%03d:%02d:%04.1f", hours, minutes, seconds);
         }
 
         /**

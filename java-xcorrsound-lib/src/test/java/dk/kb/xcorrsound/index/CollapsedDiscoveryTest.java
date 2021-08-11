@@ -24,7 +24,6 @@ import java.util.*;
 class CollapsedDiscoveryTest {
 
     final static String X_ROOT = "/home/te/projects/java-xcorrsound/samples/last_xmas/";
-
     //Files that has match using the slow search algorithm and all are correct
     final static String[] X_MATCHING = new String[] { // Under X_ROOT
             "P3_0600_0800_890110_001.mp3",
@@ -49,6 +48,12 @@ class CollapsedDiscoveryTest {
             "P3_2000_2200_970421_001.mp3",
             "P3_2000_2200_970426_001.mp3",
             "P3_2000_2200_970518_001.mp3"
+    };
+
+    // Random recordings with no special match for the snippets
+    final static String R_ROOT = "/home/te/projects/java-xcorrsound/samples/random/";
+    final static String[] R_RECORDINGS = new String[]{ // Under R_ROOT
+            "f2fdb142-0cc3-4b51-815b-45aa6fbd0d89.mp3"
     };
 
     final static String X_SOURCE_HQ = "last_xmas_chunk1.mp3"; // In resources
@@ -213,19 +218,22 @@ class CollapsedDiscoveryTest {
 
     @Test
     void chunkedFind() throws IOException {
-        final int TOP_X = 200;
-        final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
+        final int TOP_X = 20;
+        final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.every_other_0;
+        final int R_CHUNK_LENGTH = 400;
+        final int R_CHUNK_OVERLAP = 400;
 
-        final int R_CHUNK_LENGTH = 2000;
-        final int R_CHUNK_OVERLAP = 2000;
-
-        final int S_CHUNK_LENGTH = 2000;
+        final int S_CHUNK_LENGTH = 400;
         final int S_CHUNK_OVERLAP = 0;
 
         CollapsedDiscovery cd = new CollapsedDiscovery(R_CHUNK_LENGTH, R_CHUNK_OVERLAP, STRATEGY);
-        addRecordings(cd, X_ROOT, X_MATCHING);
-        addRecordings(cd, B_ROOT, B_MATCHING);
+        addRecordings(cd, X_ROOT, new String[]{"P3_1000_1200_901211_001.mp3"});
+        addRecordings(cd, R_ROOT, R_RECORDINGS);
+        addRecordings(cd, B_ROOT, new String[]{"P3_0800_1000_970406_001.mp3"});
+        //addRecordings(cd, X_ROOT, X_MATCHING);
+        //addRecordings(cd, B_ROOT, B_MATCHING);
 
+        System.out.println("Chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
         topChunked(cd, X_SOURCE_HQ, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
         topChunked(cd, X_SOURCE_LQ, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
@@ -239,8 +247,10 @@ class CollapsedDiscoveryTest {
         List<List<ChunkCounter.Hit>> chunkHits =
                 cd.findCandidates(getResource(snippet), topX, PRE_SKIP, POST_SKIP, sChunkLength, sChunkOverlap);
         long[] snippetPrints = cd.getRawPrints(Path.of(getResource(snippet)));
-        System.out.println("*** Hits for " + snippet + " with " + snippetPrints.length + " prints");
+        System.out.println("*** Hits for " + snippet + " with " + snippetPrints.length + " prints " +
+                           "(" + snippetPrints.length*ChunkCounter.MS_PER_FINGERPRINT/1000 + " seconds)");
         for (int i = 0 ; i < chunkHits.size() ; i++) {
+            //chunkHits.get(i).sort(Comparator.comparing(ChunkCounter.Hit::getRecordingID).thenComparingInt(ChunkCounter.Hit::getMatchAreaStartFingerprint));
             System.out.println("chunk " + i);
             chunkHits.get(i).forEach(System.out::println);
         }
