@@ -101,7 +101,8 @@ public class ChunkCounter {
         private final int matchAreaStartFingerprint; // Inclusive
         private final int matchAreaEndFingerprint; // Exclusive
         private final double matchAreaStartSeconds;
-        private double score = 0.0; // Optional score
+        private double collapsedScore = 0.0; // Optional score
+        private double rawScore = 0.0; // Optional score
 
         public Hit(String recordingID, int chunkID,
                    int matchAreaStartFingerprint, int matchAreaEndFingerprint, int matches) {
@@ -149,12 +150,20 @@ public class ChunkCounter {
             return matchAreaStartSeconds;
         }
 
-        public double getScore() {
-            return score;
+        public double getCollapsedScore() {
+            return collapsedScore;
         }
 
-        public void setScore(double score) {
-            this.score = score;
+        public void setCollapsedScore(double collapsedScore) {
+            this.collapsedScore = collapsedScore;
+        }
+
+        public double getRawScore() {
+            return rawScore;
+        }
+
+        public void setRawScore(double rawScore) {
+            this.rawScore = rawScore;
         }
 
         private String getMatchAreaStartHumanTime() {
@@ -182,7 +191,8 @@ public class ChunkCounter {
                    ", matchAreaStartFP=" + matchAreaStartFingerprint +
                    ", matchAreaEndFP=" + matchAreaEndFingerprint +
                    ", matches=" + matches +
-                   ", score=" + score +
+                   ", collapsedScore=" + collapsedScore +
+                   ", rawScore=" + rawScore +
                    '}';
         }
 

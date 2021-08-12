@@ -1,6 +1,5 @@
 package dk.kb.xcorrsound.index;
 
-import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -221,20 +220,21 @@ class CollapsedDiscoveryTest {
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.every_other_0;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
-        final int R_CHUNK_LENGTH = 50000;
-        final int R_CHUNK_OVERLAP = 50000;
+        final int R_CHUNK_LENGTH = 20000;
+        final int R_CHUNK_OVERLAP = 2000;
 
-        final int S_CHUNK_LENGTH = 400;
+        final int S_CHUNK_LENGTH = 500;
         final int S_CHUNK_OVERLAP = 0;
 
         CollapsedDiscovery cd = new CollapsedDiscovery(R_CHUNK_LENGTH, R_CHUNK_OVERLAP, STRATEGY).
-                setScorer(this::findBestMatchNonExhaustive);
-        
-        addRecordings(cd, X_ROOT, new String[]{"P3_1000_1200_901211_001.mp3"});
+                setCollapsedScorer(ScoreUtil::matchingBits16NonExhaustive).
+                setRawScorer(ScoreUtil::matchingBits32NonExhaustive);
+
+        //addRecordings(cd, X_ROOT, new String[]{"P3_1000_1200_901211_001.mp3"});
         addRecordings(cd, R_ROOT, R_RECORDINGS);
-        addRecordings(cd, B_ROOT, new String[]{"P3_0800_1000_970406_001.mp3"});
-        //addRecordings(cd, X_ROOT, X_MATCHING);
-        //addRecordings(cd, B_ROOT, B_MATCHING);
+        //addRecordings(cd, B_ROOT, new String[]{"P3_0800_1000_970406_001.mp3"});
+        addRecordings(cd, X_ROOT, X_MATCHING);
+        addRecordings(cd, B_ROOT, B_MATCHING);
 
         System.out.println("Chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
@@ -254,11 +254,19 @@ class CollapsedDiscoveryTest {
                            "(" + snippetPrints.length*ChunkCounter.MS_PER_FINGERPRINT/1000 + " seconds)");
         for (int i = 0 ; i < chunkHits.size() ; i++) {
             //chunkHits.get(i).sort(Comparator.comparing(ChunkCounter.Hit::getRecordingID).thenComparingInt(ChunkCounter.Hit::getMatchAreaStartFingerprint));
+            List<ChunkCounter.Hit> hits = chunkHits.get(i);
             System.out.println("chunk " + i);
-            chunkHits.get(i).forEach(System.out::println);
+            System.out.println(" - Sorted by matches");
+            hits.forEach(System.out::println);
+            System.out.println(" - Sorted by score, duplicate recordings removed");
+
+            final Set<String> seenRecordings = new HashSet<>();
+            hits.stream().
+                    filter(hit -> seenRecordings.add(hit.getRecordingID())).
+                    sorted(Comparator.comparing(ChunkCounter.Hit::getCollapsedScore).reversed()).
+                    forEach(System.out::println);
         }
     }
-
 
     void addRecordings(CollapsedDiscovery cd, String root, String[] instances)  {
         Arrays.stream(instances)
@@ -274,61 +282,6 @@ class CollapsedDiscoveryTest {
 
     String getResource(String resource) {
         return Thread.currentThread().getContextClassLoader().getResource(resource).getFile();
-    }
-
-    /**
-     * Finds the position ther the overlap of the snippet in the recording has the highest amount of overlapping bits.
-     * Returns the fraction of overlapping bits.
-     *
-     * Performance is {@code O(n*m)} where {@code n = snippet.length} and {@code m = recording.length}.
-     * @param snippet    the snippet fingerprints  to check for within the recording fingerprints.
-     * @param snipStart  index of the first fingerprint in the snipet to check, inclusive.
-     * @param snipEnd    index of the last fingerprint in the snippet to check, exclusive.
-     * @param recording  fingerprints for the recording.
-     * @param recStart   index of the first fingerprint in the recording to search, inclusive.
-     * @param recEnd     index of the last fingerprint in the recording to search, exclusive.
-     * @param exhaustive if true, the sliding window in the recording continues until it is only 1 fingerprint long.
-     *                   if false, the sliding window stops when its right edge reaches recEnd.
-     * @return
-     */
-    double findBestMatch(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd,
-                         boolean exhaustive) {
-        if (snipStart < 0) {
-            throw new IllegalArgumentException("Illegal snippet area start: snipStart=" + snipStart);
-        }
-        recEnd = Math.min(recEnd, recording.length);
-        snipEnd = Math.min(snipEnd, snippet.length);
-
-        int slidingStartMax = exhaustive ? recEnd-2 : recEnd-1-(snipEnd-snipStart);
-        if (slidingStartMax < 0) { // Happens if snippet.length > recEnd-recStart.
-            slidingStartMax = 1;
-        }
-
-        int bestStartPos = -1;
-        double bestFraction = 0.0;
-
-        // Extremely dumb brute force
-        //System.out.println("Checking snipStart=" +snipStart + ", snipEnd=" + snipEnd + ", recStart=" + recStart + ", recEnd=" + recEnd + ", slidingEnd=" + slidingStartMax);
-        for (int slidingOrigo = recStart ; slidingOrigo < slidingStartMax ; slidingOrigo++) {
-            int maxSlidingWindowLength = recEnd-slidingOrigo;
-            int realSnipEnd = Math.min(snipEnd, snipStart + maxSlidingWindowLength);
-            long nonMatchingBits = 0;
-            for (int i = snipStart; i < realSnipEnd ; i++) {
-                nonMatchingBits += Long.bitCount(recording[slidingOrigo+i] ^ snippet[i]);
-            }
-            double fraction = 1 - (1.0 * nonMatchingBits / ((realSnipEnd-snipStart) * 16));
-            if (fraction > bestFraction) {
-                bestFraction = fraction;
-                bestStartPos = slidingOrigo;
-            }
-        }
-        return bestFraction;
-    }
-    double findBestMatchExhaustive(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
-        return findBestMatch(snippet, snipStart, snipEnd, recording, recStart, recEnd, true);
-    }
-    double findBestMatchNonExhaustive(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
-        return findBestMatch(snippet, snipStart, snipEnd, recording, recStart, recEnd, false);
     }
 
 

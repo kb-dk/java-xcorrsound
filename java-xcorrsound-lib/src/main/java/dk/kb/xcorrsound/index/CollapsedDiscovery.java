@@ -59,7 +59,8 @@ public class CollapsedDiscovery {
     public static final int CHUNK_LENGTH_DEFAULT = 51600; // 10 minutes
     public static final int CHUNK_OVERLAP_DEFAULT = 1000; // 10 seconds
 
-    ScoreCalculator scorer = new ConstantScorer(0.0); // Optional calculator of scores
+    ScoreUtil.Scorer16 collapsedScorer = new ScoreUtil.ConstantScorer16(0.0); // Optional calculator of scores
+    ScoreUtil.ScorerLong rawScorer = new ScoreUtil.ConstantScorerLong(0.0); // Optional calculator of scores
 
     ChunkMap16 chunkMap;
     Collapsor collapsor;
@@ -98,12 +99,21 @@ public class CollapsedDiscovery {
         log.debug("Added recording '" + recordingPath + "' with " + collapsed.length + " fingerprints");
     }
 
-    public ScoreCalculator getScorer() {
-        return scorer;
+    public ScoreUtil.Scorer16 getCollapsedScorer() {
+        return collapsedScorer;
     }
 
-    public CollapsedDiscovery setScorer(ScoreCalculator scorer) {
-        this.scorer = scorer;
+    public CollapsedDiscovery setCollapsedScorer(ScoreUtil.Scorer16 scorer) {
+        this.collapsedScorer = scorer;
+        return this;
+    }
+
+    public ScoreUtil.ScorerLong getRawScorer() {
+        return rawScorer;
+    }
+
+    public CollapsedDiscovery setRawScorer(ScoreUtil.ScorerLong rawScorer) {
+        this.rawScorer = rawScorer;
         return this;
     }
 
@@ -144,7 +154,8 @@ public class CollapsedDiscovery {
     public List<List<ChunkCounter.Hit>> findCandidates(
             String snippetPath, int topX, int preSkip, int postSkip, int chunkLength, int chunkOverlap)
             throws IOException {
-        char[] snipCollapsed = getCollapsed(Path.of(snippetPath));
+        long[] snipRaw = getRawPrints(Path.of(snippetPath));
+        char[] snipCollapsed = collapsor.getCollapsed((snipRaw));
 
         if (preSkip + postSkip >= snipCollapsed.length) {
             log.warn("preSkip={} + postSkip={} >= numSnippets={}. Empty result list returned",
@@ -163,14 +174,12 @@ public class CollapsedDiscovery {
             int snipEnd = Math.min(snipStart + chunkLength + chunkOverlap, snipCollapsed.length-postSkip);
             List<ChunkCounter.Hit> hits = chunkMap.countMatches(snipCollapsed, snipStart, snipEnd).getTopMatches(topX);
             for (ChunkCounter.Hit hit: hits) {
-                if (scorer instanceof ConstantScorer) {
-                    hit.setScore(((ConstantScorer)scorer).getConstantScore());
-                } else {
-                    char[] recCollapsed = getCollapsed(Path.of(hit.getRecordingID()));
-                    double score = scorer.score(snipCollapsed, snipStart, snipEnd,
-                                                recCollapsed, hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
-                    hit.setScore(score);
-                }
+                long[] recRaw = getRawPrints(Path.of(hit.getRecordingID()));
+                char[] recCollapsed = collapsor.getCollapsed((recRaw));
+                hit.setCollapsedScore(collapsedScorer.score(
+                        snipCollapsed, snipStart, snipEnd, recCollapsed, hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint()));
+                hit.setRawScore(rawScorer.score(
+                        snipRaw, snipStart, snipEnd, recRaw, hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint()));
             }
             chunkResults.add(hits);
         }
@@ -274,35 +283,4 @@ public class CollapsedDiscovery {
         return Path.of(base + ".rawPrints");
     }
 
-    @FunctionalInterface
-    public interface ScoreCalculator {
-        /**
-         * @return the score for the given part of the scippet in given part of the record.
-         */
-        double score(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd);
-    }
-
-    public static class ConstantScorer implements ScoreCalculator {
-        final double score;
-
-        public ConstantScorer(double score) {
-            this.score = score;
-        }
-
-        @Override
-        public double score(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
-            return 0;
-        }
-
-        public double getConstantScore() {
-            return score;
-        }
-
-        @Override
-        public String toString() {
-            return "ConstantScorer{" +
-                   "score=" + score +
-                   '}';
-        }
-    }
 }
