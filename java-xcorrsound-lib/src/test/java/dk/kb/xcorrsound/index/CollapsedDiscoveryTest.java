@@ -220,8 +220,10 @@ class CollapsedDiscoveryTest {
     void chunkedFind() throws IOException {
         final int TOP_X = 20;
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.every_other_0;
-        final int R_CHUNK_LENGTH = 400;
-        final int R_CHUNK_OVERLAP = 400;
+        //  500 = very promising results, 42GB/year
+        // 5000 = might work, 4GB/year
+        final int R_CHUNK_LENGTH = 50000;
+        final int R_CHUNK_OVERLAP = 50000;
 
         final int S_CHUNK_LENGTH = 400;
         final int S_CHUNK_OVERLAP = 0;
