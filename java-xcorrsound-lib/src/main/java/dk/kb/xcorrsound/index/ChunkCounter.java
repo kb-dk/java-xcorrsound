@@ -101,6 +101,7 @@ public class ChunkCounter {
         private final int matchAreaStartFingerprint; // Inclusive
         private final int matchAreaEndFingerprint; // Exclusive
         private final double matchAreaStartSeconds;
+        private double score = 0.0; // Optional score
 
         public Hit(String recordingID, int chunkID,
                    int matchAreaStartFingerprint, int matchAreaEndFingerprint, int matches) {
@@ -148,6 +149,14 @@ public class ChunkCounter {
             return matchAreaStartSeconds;
         }
 
+        public double getScore() {
+            return score;
+        }
+
+        public void setScore(double score) {
+            this.score = score;
+        }
+
         private String getMatchAreaStartHumanTime() {
             double seconds = matchAreaStartSeconds;
             int hours = (int) (seconds / (60 * 60));
@@ -173,6 +182,7 @@ public class ChunkCounter {
                    ", matchAreaStartFP=" + matchAreaStartFingerprint +
                    ", matchAreaEndFP=" + matchAreaEndFingerprint +
                    ", matches=" + matches +
+                   ", score=" + score +
                    '}';
         }
 

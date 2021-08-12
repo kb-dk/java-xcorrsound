@@ -59,6 +59,8 @@ public class CollapsedDiscovery {
     public static final int CHUNK_LENGTH_DEFAULT = 51600; // 10 minutes
     public static final int CHUNK_OVERLAP_DEFAULT = 1000; // 10 seconds
 
+    ScoreCalculator scorer = new ConstantScorer(0.0); // Optional calculator of scores
+
     ChunkMap16 chunkMap;
     Collapsor collapsor;
 
@@ -96,6 +98,14 @@ public class CollapsedDiscovery {
         log.debug("Added recording '" + recordingPath + "' with " + collapsed.length + " fingerprints");
     }
 
+    public ScoreCalculator getScorer() {
+        return scorer;
+    }
+
+    public CollapsedDiscovery setScorer(ScoreCalculator scorer) {
+        this.scorer = scorer;
+        return this;
+    }
 
     /**
      * Uses the index structure for fast lookup for candidates. It is recommended to make a second pass of the returned
@@ -107,8 +117,7 @@ public class CollapsedDiscovery {
      * @throws IOException if it was not possible to generate fingerprints from snippetPath.
      */
     public List<ChunkCounter.Hit> findCandidates(String snippetPath, int topX) throws IOException {
-        long[] rawPrints = getRawPrints(Path.of(snippetPath));
-        char[] collapsed = collapsor.getCollapsed(rawPrints);
+        char[] collapsed = getCollapsed(Path.of(snippetPath));
 
         if (collapsed.length > chunkMap.getChunkOverlap()) {
             log.warn("Attempting search for snippet with {} fingerprints with a setup where the overlap between " +
@@ -135,25 +144,35 @@ public class CollapsedDiscovery {
     public List<List<ChunkCounter.Hit>> findCandidates(
             String snippetPath, int topX, int preSkip, int postSkip, int chunkLength, int chunkOverlap)
             throws IOException {
-        long[] rawPrints = getRawPrints(Path.of(snippetPath));
-        char[] collapsed = collapsor.getCollapsed(rawPrints);
+        char[] snipCollapsed = getCollapsed(Path.of(snippetPath));
 
-        if (preSkip + postSkip >= collapsed.length) {
+        if (preSkip + postSkip >= snipCollapsed.length) {
             log.warn("preSkip={} + postSkip={} >= numSnippets={}. Empty result list returned",
-                     preSkip, postSkip, collapsed.length);
+                     preSkip, postSkip, snipCollapsed.length);
             return Collections.emptyList();
         }
 
-        int numChunks = (collapsed.length-preSkip-postSkip) / chunkLength;
-        if (numChunks*chunkLength < (collapsed.length-preSkip-postSkip)) {
+        int numChunks = (snipCollapsed.length-preSkip-postSkip) / chunkLength;
+        if (numChunks*chunkLength < (snipCollapsed.length-preSkip-postSkip)) {
             numChunks++;
         }
 
         List<List<ChunkCounter.Hit>> chunkResults = new ArrayList<>(numChunks);
         for (int chunk = 0 ; chunk < numChunks ; chunk++) {
-            int start = preSkip + chunk*chunkLength;
-            int end = Math.min(start + chunkLength + chunkOverlap, collapsed.length-postSkip);
-            chunkResults.add(chunkMap.countMatches(collapsed, start, end).getTopMatches(topX));
+            int snipStart = preSkip + chunk*chunkLength;
+            int snipEnd = Math.min(snipStart + chunkLength + chunkOverlap, snipCollapsed.length-postSkip);
+            List<ChunkCounter.Hit> hits = chunkMap.countMatches(snipCollapsed, snipStart, snipEnd).getTopMatches(topX);
+            for (ChunkCounter.Hit hit: hits) {
+                if (scorer instanceof ConstantScorer) {
+                    hit.setScore(((ConstantScorer)scorer).getConstantScore());
+                } else {
+                    char[] recCollapsed = getCollapsed(Path.of(hit.getRecordingID()));
+                    double score = scorer.score(snipCollapsed, snipStart, snipEnd,
+                                                recCollapsed, hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
+                    hit.setScore(score);
+                }
+            }
+            chunkResults.add(hits);
         }
         return chunkResults;
 /*        if (collapsed.length > chunkMap.getChunkOverlap()) {
@@ -163,21 +182,29 @@ public class CollapsedDiscovery {
         }*/
     }
 
-    long[] getRawPrints(final Path source) throws IOException {
-        if (!Files.exists(source)) {
-            throw new FileNotFoundException("The file '" + source + "' does not exist");
+    /**
+     * Processes the given file using {@link XCorrSoundFacade#generateFingerPrintFromSoundFile} and returns the result.
+     *
+     * The generated fingerprints are cached for subsequent calls.
+     * @param recording a sound file.
+     * @return fingerprints for the recording.
+     * @throws IOException if the file could not be loaded or processed.
+     */
+    long[] getRawPrints(final Path recording) throws IOException {
+        if (!Files.exists(recording)) {
+            throw new FileNotFoundException("The file '" + recording + "' does not exist");
         }
-        final Path processedSource = source.toString().endsWith("mp3") || source.toString().endsWith("wav") ?
-                getRawPrintsPath(source.toString()) :
-                source;
+        final Path processedSource = recording.toString().endsWith("mp3") || recording.toString().endsWith("wav") ?
+                getRawPrintsPath(recording.toString()) :
+                recording;
         if (!Files.exists(processedSource)) {
             try {
-                generatePrints(source.toString());
+                generatePrints(recording.toString());
             } catch (Exception e) {
-                throw new IOException("Exception generating fingerprints for '" + source + "'", e);
+                throw new IOException("Exception generating fingerprints for '" + recording + "'", e);
             }
             if (!Files.exists(processedSource)) {
-                throw new IOException("Unable to generate fingerprints for '" + source + "'");
+                throw new IOException("Unable to generate fingerprints for '" + recording + "'");
             }
         }
 
@@ -193,8 +220,20 @@ public class CollapsedDiscovery {
             }
             return fingerprints;
         } catch (Exception e) {
-            throw new IOException("Failed loading fingerprints for '" + source + "'", e);
+            throw new IOException("Failed loading fingerprints for '" + recording + "'", e);
         }
+    }
+
+
+    /**
+     * Extracts raw fingerprints using {@link #getRawPrints(Path)} and collapses them using {@link #collapsor}.
+     * @param recording a sound file.
+     * @return collapsed fingerprints for the recording.
+     * @throws IOException
+     */
+    char[] getCollapsed(final Path recording) throws IOException {
+        long[] rawPrints = getRawPrints(recording);
+        return collapsor.getCollapsed(rawPrints);
     }
 
     void generatePrints(String soundFile) {
@@ -235,4 +274,35 @@ public class CollapsedDiscovery {
         return Path.of(base + ".rawPrints");
     }
 
+    @FunctionalInterface
+    public interface ScoreCalculator {
+        /**
+         * @return the score for the given part of the scippet in given part of the record.
+         */
+        double score(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd);
+    }
+
+    public static class ConstantScorer implements ScoreCalculator {
+        final double score;
+
+        public ConstantScorer(double score) {
+            this.score = score;
+        }
+
+        @Override
+        public double score(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
+            return 0;
+        }
+
+        public double getConstantScore() {
+            return score;
+        }
+
+        @Override
+        public String toString() {
+            return "ConstantScorer{" +
+                   "score=" + score +
+                   '}';
+        }
+    }
 }
