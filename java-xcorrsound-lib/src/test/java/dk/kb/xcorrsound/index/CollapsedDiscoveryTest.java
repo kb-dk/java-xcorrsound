@@ -242,7 +242,7 @@ class CollapsedDiscoveryTest {
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
-        final int R_CHUNK_LENGTH = 25000;
+        final int R_CHUNK_LENGTH = 15000;
         final int R_CHUNK_OVERLAP = 500;
 
         final int S_CHUNK_LENGTH = 500;
@@ -276,32 +276,41 @@ class CollapsedDiscoveryTest {
         long[] snippetPrints = cd.getRawPrints(Path.of(getResource(snippet)));
         System.out.println("\n*** Hits for " + snippet + " with " + snippetPrints.length + " prints " +
                            "(" + snippetPrints.length*ChunkCounter.MS_PER_FINGERPRINT/1000 + " seconds)");
-        for (int i = 0 ; i < chunkHits.size() ; i++) {
-            //chunkHits.get(i).sort(Comparator.comparing(ChunkCounter.Hit::getRecordingID).thenComparingInt(ChunkCounter.Hit::getMatchAreaStartFingerprint));
 
-            // De-duplicate, reduce and sort by score
-            final Set<String> seenRecordings = new HashSet<>();
-            List<SoundHit> hits = chunkHits.get(i).stream()
-                    .sorted()
-                    .filter(hit -> seenRecordings.add(hit.getRecordingID()))
-                    .limit(maxResults)
-                    .collect(Collectors.toList());
-
-            // Find the ideal number of collections to match
-            int goalCount = cd.chunkMap.recordIDs.stream().
-                    filter(record -> record.contains(goal)).
-                    collect(Collectors.toSet()).size();
-            long passed = hits.stream().
-                    filter(hit -> hit.getRecordingID().contains(goal)).
-                    count();
-
-            System.out.println("\nchunk " + i + " (goal " + passed + "/" + goalCount +
-                               "): Sorted by natural order, duplicate recordings removed");
-            hits.stream()
-                    .map(Object::toString)
-                    .map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", ""))
-                    .forEach(System.out::println);
+        List<SoundHit> flattened = chunkHits.stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+        dumpHits(cd, flattened, maxResults, goal);
+        /*
+        for (List<SoundHit> hits : chunkHits) {
+            dumpHits(cd, hits, maxResults, goal);
         }
+         */
+    }
+
+    private void dumpHits(CollapsedDiscovery cd, List<SoundHit> hits, int maxResults, String goal) {
+        // De-duplicate, reduce and sort by score
+        final Set<String> seenRecordings = new HashSet<>();
+        hits = hits.stream()
+                .sorted()
+                .filter(hit -> seenRecordings.add(hit.getRecordingID()))
+                .limit(maxResults)
+                .collect(Collectors.toList());
+
+        // Find the ideal number of collections to match
+        int goalCount = cd.chunkMap.recordIDs.stream().
+                filter(record -> record.contains(goal)).
+                collect(Collectors.toSet()).size();
+        long passed = hits.stream().
+                filter(hit -> hit.getRecordingID().contains(goal)).
+                count();
+
+        System.out.println("\nhits (goal '" + goal + "' " + passed + "/" + goalCount +
+                           "): Sorted by natural order, duplicate recordings removed");
+        hits.stream()
+                .map(Object::toString)
+                .map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", ""))
+                .forEach(System.out::println);
     }
 
     void addRecordings(CollapsedDiscovery cd, String root, String[] instances)  {
