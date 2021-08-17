@@ -175,17 +175,21 @@ public class CollapsedDiscovery {
             List<SoundHit> hits = chunkMap.countMatches(snipCollapsed, snipStart, snipEnd).getTopMatches(topX);
             for (SoundHit hit: hits) {
                 long[] recRaw = getRawPrints(Path.of(hit.getRecordingID()));
+                {
+                    ScoreUtil.Match rMatch = rawScorer.score(
+                            snipRaw, snipStart, snipEnd, recRaw,
+                            hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
+                    hit.setRawScore(rMatch.score);
+                    hit.setRawOffset(rMatch.offset);
+                }
                 char[] recCollapsed = collapsor.getCollapsed((recRaw));
-                ScoreUtil.Match cMatch = collapsedScorer.score(
-                        snipCollapsed, snipStart, snipEnd, recCollapsed,
-                        hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
-                hit.setCollapsedScore(cMatch.score);
-                hit.setCollapsedOffset(cMatch.offset);
-                ScoreUtil.Match rMatch = rawScorer.score(
-                        snipRaw, snipStart, snipEnd, recRaw,
-                        hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
-                hit.setRawScore(rMatch.score);
-                hit.setRawOffset(rMatch.offset);
+                {
+                    ScoreUtil.Match cMatch = collapsedScorer.score(
+                            snipCollapsed, snipStart, snipEnd, recCollapsed,
+                            hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
+                    hit.setCollapsedScore(cMatch.score);
+                    hit.setCollapsedOffset(cMatch.offset);
+                }
             }
             chunkResults.add(hits);
         }

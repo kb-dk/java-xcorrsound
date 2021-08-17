@@ -179,9 +179,10 @@ public class SoundHit implements Comparable<SoundHit>{
     }
 
     private static final Comparator<SoundHit> SOUNDHIT_COMPARATOR =
-            Comparator.comparing(SoundHit::getRawScore).
-                    thenComparing(SoundHit::getCollapsedScore).
-                    thenComparing(SoundHit::getMatches).
+            Comparator.
+                    comparing(SoundHit::getRawScore).reversed().
+                    thenComparing(SoundHit::getCollapsedScore).reversed().
+                    thenComparing(SoundHit::getMatches).reversed().
                     thenComparing(SoundHit::getRecordingChunkID).
                     thenComparing(SoundHit::getRecordingID);
 

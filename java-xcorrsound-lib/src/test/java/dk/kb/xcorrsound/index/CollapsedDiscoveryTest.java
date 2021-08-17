@@ -236,8 +236,9 @@ class CollapsedDiscoveryTest {
 
     @Test
     void chunkedFind() throws IOException {
-        final int TOP_X = 30;
-        final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.every_other_0;
+        final int TOP_X = 50;
+        final int MAX_RESULTS = 20;
+        final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
         final int R_CHUNK_LENGTH = 20000;
@@ -259,12 +260,12 @@ class CollapsedDiscoveryTest {
         System.out.println("Record chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
         System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
-        topChunked(cd, X_SOURCE_HQ, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
-        topChunked(cd, X_SOURCE_LQ, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
-        topChunked(cd, B_SOURCE, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, X_SOURCE_HQ, TOP_X, MAX_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, X_SOURCE_LQ, TOP_X, MAX_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, B_SOURCE, TOP_X, MAX_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
     }
 
-    private void topChunked(CollapsedDiscovery cd, String snippet, int topX, int sChunkLength, int sChunkOverlap) throws IOException {
+    private void topChunked(CollapsedDiscovery cd, String snippet, int topX, int maxResults, int sChunkLength, int sChunkOverlap) throws IOException {
         final int PRE_SKIP = 50;
         final int POST_SKIP = 50;
 
@@ -278,17 +279,19 @@ class CollapsedDiscoveryTest {
             List<SoundHit> hits = chunkHits.get(i);
             System.out.println("chunk " + i);
 
+            /*
             System.out.println(" - Sorted by matches");
             hits.stream().
                     map(Object::toString).
                     map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", "")).
                     forEach(System.out::println);
-
-            System.out.println(" - Sorted by score, duplicate recordings removed");
+              */
+            System.out.println(" - Sorted by natural order, duplicate recordings removed");
             final Set<String> seenRecordings = new HashSet<>();
             hits.stream().
+                    sorted().
                     filter(hit -> seenRecordings.add(hit.getRecordingID())).
-                    sorted(Comparator.comparing(SoundHit::getCollapsedScore).reversed()).
+                    limit(maxResults).
                     map(Object::toString).
                     map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", "")).
                     forEach(System.out::println);

@@ -91,11 +91,7 @@ public class ChunkMap16 {
      * @return a counter for all chunk matches.
      */
     public ChunkCounter countMatches(char[] fingerprints) {
-        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordIDs, chunkLength, chunkOverlap);
-        for (char fingerprint: fingerprints) {
-            counter.add(getMatchingChunksIDs(fingerprint));
-        }
-        return counter;
+        return countMatches(fingerprints, 0, fingerprints.length);
     }
 
     /**
@@ -110,9 +106,25 @@ public class ChunkMap16 {
     public ChunkCounter countMatches(char[] fingerprints, int areaStart, int areaEnd) {
         ChunkCounter counter = new ChunkCounter(getNumChunks(), recordIDs, chunkLength, chunkOverlap);
         areaEnd = Math.min(areaEnd, fingerprints.length);
+
+        // Pseudo code
+        //for (int index = areaStart ; index < areaEnd ; index++) {
+        //    counter.add(getMatchingChunksIDs(fingerprints[index]));
+        //}
+
+        // Updating the ChunkCounter is a bit heavy so start by counting duplicate fingerprints
+        int[] duplicates = new int[65536]; // char = 2 bytes = 65536 possibilities
         for (int index = areaStart ; index < areaEnd ; index++) {
-            counter.add(getMatchingChunksIDs(fingerprints[index]));
+            ++duplicates[fingerprints[index]];
         }
+        // Iterate the dulicates and update the counter with the number of duplicates for any given fingerprint
+        int count;
+        for (int fingerprint = 0 ; fingerprint < duplicates.length ; fingerprint++) {
+            if ((count = duplicates[fingerprint]) != 0) {
+                counter.add(getMatchingChunksIDs((char) fingerprint), count);
+            }
+        }
+
         return counter;
     }
 
