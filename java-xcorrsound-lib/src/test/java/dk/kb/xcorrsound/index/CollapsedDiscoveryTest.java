@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /*
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -236,13 +237,13 @@ class CollapsedDiscoveryTest {
 
     @Test
     void chunkedFind() throws IOException {
-        final int TOP_X = 50;
-        final int MAX_RESULTS = 20;
+        final int TOP_X = 100;
+        final int SHOW_RESULTS = 20;
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
-        final int R_CHUNK_LENGTH = 20000;
-        final int R_CHUNK_OVERLAP = 2000;
+        final int R_CHUNK_LENGTH = 25000;
+        final int R_CHUNK_OVERLAP = 500;
 
         final int S_CHUNK_LENGTH = 500;
         final int S_CHUNK_OVERLAP = 0;
@@ -260,12 +261,13 @@ class CollapsedDiscoveryTest {
         System.out.println("Record chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
         System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
-        topChunked(cd, X_SOURCE_HQ, TOP_X, MAX_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
-        topChunked(cd, X_SOURCE_LQ, TOP_X, MAX_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
-        topChunked(cd, B_SOURCE, TOP_X, MAX_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, X_SOURCE_HQ, "last_xmas", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, X_SOURCE_LQ, "last_xmas",TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, B_SOURCE, "barbie_girl", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
     }
 
-    private void topChunked(CollapsedDiscovery cd, String snippet, int topX, int maxResults, int sChunkLength, int sChunkOverlap) throws IOException {
+    private void topChunked(CollapsedDiscovery cd, String snippet, String goal, int topX, int maxResults,
+                            int sChunkLength, int sChunkOverlap) throws IOException {
         final int PRE_SKIP = 50;
         final int POST_SKIP = 50;
 
@@ -276,25 +278,29 @@ class CollapsedDiscoveryTest {
                            "(" + snippetPrints.length*ChunkCounter.MS_PER_FINGERPRINT/1000 + " seconds)");
         for (int i = 0 ; i < chunkHits.size() ; i++) {
             //chunkHits.get(i).sort(Comparator.comparing(ChunkCounter.Hit::getRecordingID).thenComparingInt(ChunkCounter.Hit::getMatchAreaStartFingerprint));
-            List<SoundHit> hits = chunkHits.get(i);
-            System.out.println("chunk " + i);
 
-            /*
-            System.out.println(" - Sorted by matches");
-            hits.stream().
-                    map(Object::toString).
-                    map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", "")).
-                    forEach(System.out::println);
-              */
-            System.out.println(" - Sorted by natural order, duplicate recordings removed");
+            // De-duplicate, reduce and sort by score
             final Set<String> seenRecordings = new HashSet<>();
-            hits.stream().
-                    sorted().
-                    filter(hit -> seenRecordings.add(hit.getRecordingID())).
-                    limit(maxResults).
-                    map(Object::toString).
-                    map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", "")).
-                    forEach(System.out::println);
+            List<SoundHit> hits = chunkHits.get(i).stream()
+                    .sorted()
+                    .filter(hit -> seenRecordings.add(hit.getRecordingID()))
+                    .limit(maxResults)
+                    .collect(Collectors.toList());
+
+            // Find the ideal number of collections to match
+            int goalCount = cd.chunkMap.recordIDs.stream().
+                    filter(record -> record.contains(goal)).
+                    collect(Collectors.toSet()).size();
+            long passed = hits.stream().
+                    filter(hit -> hit.getRecordingID().contains(goal)).
+                    count();
+
+            System.out.println("\nchunk " + i + " (goal " + passed + "/" + goalCount +
+                               "): Sorted by natural order, duplicate recordings removed");
+            hits.stream()
+                    .map(Object::toString)
+                    .map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", ""))
+                    .forEach(System.out::println);
         }
     }
 
