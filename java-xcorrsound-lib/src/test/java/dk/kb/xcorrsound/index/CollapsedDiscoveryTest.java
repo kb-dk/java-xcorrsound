@@ -229,7 +229,7 @@ class CollapsedDiscoveryTest {
     }
 
     private void top(CollapsedDiscovery cd, String snippet, int topX) throws IOException {
-        List<ChunkCounter.Hit> hqHits = cd.findCandidates(getResource(snippet), topX);
+        List<SoundHit> hqHits = cd.findCandidates(getResource(snippet), topX);
         System.out.println("*** Hits for " + snippet);
         hqHits.forEach(System.out::println);
     }
@@ -268,14 +268,14 @@ class CollapsedDiscoveryTest {
         final int PRE_SKIP = 50;
         final int POST_SKIP = 50;
 
-        List<List<ChunkCounter.Hit>> chunkHits =
+        List<List<SoundHit>> chunkHits =
                 cd.findCandidates(getResource(snippet), topX, PRE_SKIP, POST_SKIP, sChunkLength, sChunkOverlap);
         long[] snippetPrints = cd.getRawPrints(Path.of(getResource(snippet)));
         System.out.println("\n*** Hits for " + snippet + " with " + snippetPrints.length + " prints " +
                            "(" + snippetPrints.length*ChunkCounter.MS_PER_FINGERPRINT/1000 + " seconds)");
         for (int i = 0 ; i < chunkHits.size() ; i++) {
             //chunkHits.get(i).sort(Comparator.comparing(ChunkCounter.Hit::getRecordingID).thenComparingInt(ChunkCounter.Hit::getMatchAreaStartFingerprint));
-            List<ChunkCounter.Hit> hits = chunkHits.get(i);
+            List<SoundHit> hits = chunkHits.get(i);
             System.out.println("chunk " + i);
 
             System.out.println(" - Sorted by matches");
@@ -288,7 +288,7 @@ class CollapsedDiscoveryTest {
             final Set<String> seenRecordings = new HashSet<>();
             hits.stream().
                     filter(hit -> seenRecordings.add(hit.getRecordingID())).
-                    sorted(Comparator.comparing(ChunkCounter.Hit::getCollapsedScore).reversed()).
+                    sorted(Comparator.comparing(SoundHit::getCollapsedScore).reversed()).
                     map(Object::toString).
                     map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", "")).
                     forEach(System.out::println);

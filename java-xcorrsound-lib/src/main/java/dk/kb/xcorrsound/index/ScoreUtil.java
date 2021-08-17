@@ -67,7 +67,7 @@ public class ScoreUtil {
      * @param recEnd     index of the last fingerprint in the recording to search, exclusive.
      * @param exhaustive if true, the sliding window in the recording continues until it is only 1 fingerprint long.
      *                   if false, the sliding window stops when its right edge reaches recEnd.
-     * @return
+     * @return a match with offset and score for the best match for the snippet in the recording.
      */
     public static Match findBestMatch16(
             char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd, boolean exhaustive) {
@@ -86,6 +86,7 @@ public class ScoreUtil {
         double bestFraction = 0.0;
 
         // Extremely dumb brute force
+        // TODO: Introduce early termination
         //System.out.println("Checking snipStart=" +snipStart + ", snipEnd=" + snipEnd + ", recStart=" + recStart + ", recEnd=" + recEnd + ", slidingEnd=" + slidingStartMax);
         for (int slidingOrigo = recStart ; slidingOrigo < slidingStartMax ; slidingOrigo++) {
             int maxSlidingWindowLength = recEnd-slidingOrigo;
@@ -97,6 +98,7 @@ public class ScoreUtil {
             for (int i = snipStart; i < realSnipEnd ; i++) {
                 nonMatchingBits += Long.bitCount(recording[slidingOrigo-snipStart+i] ^ snippet[i]);
             }
+            // The fraction of bits in the snippet that are equal to the bits in the recording window
             double fraction = 1 - (1.0 * nonMatchingBits / ((realSnipEnd-snipStart) * 16));
             if (fraction > bestFraction) {
                 bestFraction = fraction;
@@ -119,7 +121,7 @@ public class ScoreUtil {
      * @param recEnd     index of the last fingerprint in the recording to search, exclusive.
      * @param exhaustive if true, the sliding window in the recording continues until it is only 1 fingerprint long.
      *                   if false, the sliding window stops when its right edge reaches recEnd.
-     * @return
+     * @return a match with offset and score for the best match for the snippet in the recording.
      */
     public static Match findBestMatchLong(
             long[] snippet, int snipStart, int snipEnd, long[] recording, int recStart, int recEnd,

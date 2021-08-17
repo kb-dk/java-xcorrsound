@@ -44,7 +44,7 @@ class ChunkMap16Test {
                      "There should be the expected number of chunks containing fingerprint 'i'");
 
         ChunkCounter counter = chunkMap.countMatches("bd".toCharArray()); // abca, abd, adef
-        List<ChunkCounter.Hit> hits = counter.getTopMatches(100);
+        List<SoundHit> hits = counter.getTopMatches(100);
 
         assertEquals(3, hits.size(),
                      "There should be the expected number of hits");

@@ -126,7 +126,7 @@ public class CollapsedDiscovery {
      * @return the closes matches in descending order.
      * @throws IOException if it was not possible to generate fingerprints from snippetPath.
      */
-    public List<ChunkCounter.Hit> findCandidates(String snippetPath, int topX) throws IOException {
+    public List<SoundHit> findCandidates(String snippetPath, int topX) throws IOException {
         char[] collapsed = getCollapsed(Path.of(snippetPath));
 
         if (collapsed.length > chunkMap.getChunkOverlap()) {
@@ -151,7 +151,7 @@ public class CollapsedDiscovery {
      * @return the closes matches in descending order for each chunk of snippet fingerprints, starting from chunk 0.
      * @throws IOException if it was not possible to generate fingerprints from snippetPath.
      */
-    public List<List<ChunkCounter.Hit>> findCandidates(
+    public List<List<SoundHit>> findCandidates(
             String snippetPath, int topX, int preSkip, int postSkip, int chunkLength, int chunkOverlap)
             throws IOException {
         long[] snipRaw = getRawPrints(Path.of(snippetPath));
@@ -168,12 +168,12 @@ public class CollapsedDiscovery {
             numChunks++;
         }
 
-        List<List<ChunkCounter.Hit>> chunkResults = new ArrayList<>(numChunks);
+        List<List<SoundHit>> chunkResults = new ArrayList<>(numChunks);
         for (int chunk = 0 ; chunk < numChunks ; chunk++) {
             int snipStart = preSkip + chunk*chunkLength;
             int snipEnd = Math.min(snipStart + chunkLength + chunkOverlap, snipCollapsed.length-postSkip);
-            List<ChunkCounter.Hit> hits = chunkMap.countMatches(snipCollapsed, snipStart, snipEnd).getTopMatches(topX);
-            for (ChunkCounter.Hit hit: hits) {
+            List<SoundHit> hits = chunkMap.countMatches(snipCollapsed, snipStart, snipEnd).getTopMatches(topX);
+            for (SoundHit hit: hits) {
                 long[] recRaw = getRawPrints(Path.of(hit.getRecordingID()));
                 char[] recCollapsed = collapsor.getCollapsed((recRaw));
                 ScoreUtil.Match cMatch = collapsedScorer.score(
