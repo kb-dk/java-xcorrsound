@@ -176,10 +176,16 @@ public class CollapsedDiscovery {
             for (ChunkCounter.Hit hit: hits) {
                 long[] recRaw = getRawPrints(Path.of(hit.getRecordingID()));
                 char[] recCollapsed = collapsor.getCollapsed((recRaw));
-                hit.setCollapsedScore(collapsedScorer.score(
-                        snipCollapsed, snipStart, snipEnd, recCollapsed, hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint()));
-                hit.setRawScore(rawScorer.score(
-                        snipRaw, snipStart, snipEnd, recRaw, hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint()));
+                ScoreUtil.Match cMatch = collapsedScorer.score(
+                        snipCollapsed, snipStart, snipEnd, recCollapsed,
+                        hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
+                hit.setCollapsedScore(cMatch.score);
+                hit.setCollapsedOffset(cMatch.offset);
+                ScoreUtil.Match rMatch = rawScorer.score(
+                        snipRaw, snipStart, snipEnd, recRaw,
+                        hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
+                hit.setRawScore(rMatch.score);
+                hit.setRawOffset(rMatch.offset);
             }
             chunkResults.add(hits);
         }

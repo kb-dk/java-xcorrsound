@@ -102,7 +102,9 @@ public class ChunkCounter {
         private final int matchAreaEndFingerprint; // Exclusive
         private final double matchAreaStartSeconds;
         private double collapsedScore = 0.0; // Optional score
+        private int collapsedOffset = -1; // Optional offset for the highest score
         private double rawScore = 0.0; // Optional score
+        private int rawOffset = -1; // Optional offset for the highest score
 
         public Hit(String recordingID, int chunkID,
                    int matchAreaStartFingerprint, int matchAreaEndFingerprint, int matches) {
@@ -111,7 +113,7 @@ public class ChunkCounter {
             this.matches = matches;
             this.matchAreaStartFingerprint = matchAreaStartFingerprint;
             this.matchAreaEndFingerprint = matchAreaEndFingerprint;
-            this.matchAreaStartSeconds = matchAreaStartFingerprint * ChunkCounter.MS_PER_FINGERPRINT / 1000.0;
+            this.matchAreaStartSeconds = offsetToSeconds(matchAreaStartFingerprint);
         }
 
         /**
@@ -158,6 +160,19 @@ public class ChunkCounter {
             this.collapsedScore = collapsedScore;
         }
 
+        public int getCollapsedOffset() {
+            return collapsedOffset;
+        }
+
+        public void setCollapsedOffset(int collapsedOffset) {
+            if (collapsedOffset < matchAreaStartFingerprint || collapsedOffset > matchAreaEndFingerprint) {
+                throw new ArrayIndexOutOfBoundsException(String.format(
+                        Locale.ROOT, "collapsedOffset %d is outside of matchArea [%d -> %d]",
+                        collapsedOffset, matchAreaStartFingerprint, matchAreaEndFingerprint));
+            }
+            this.collapsedOffset = collapsedOffset;
+        }
+
         public double getRawScore() {
             return rawScore;
         }
@@ -166,13 +181,41 @@ public class ChunkCounter {
             this.rawScore = rawScore;
         }
 
+        public int getRawOffset() {
+            return rawOffset;
+        }
+
+        public void setRawOffset(int rawOffset) {
+            if (rawOffset < matchAreaStartFingerprint || rawOffset > matchAreaEndFingerprint) {
+                throw new ArrayIndexOutOfBoundsException(String.format(
+                        Locale.ROOT, "rawOffset %d is outside of matchArea [%d -> %d]",
+                        rawOffset, matchAreaStartFingerprint, matchAreaEndFingerprint));
+            }
+            this.rawOffset = rawOffset;
+        }
+
         private String getMatchAreaStartHumanTime() {
-            double seconds = matchAreaStartSeconds;
+            return secondsToHumanTime(matchAreaStartSeconds);
+        }
+
+        private String secondsToHumanTime(double seconds) {
             int hours = (int) (seconds / (60 * 60));
             seconds -= hours * 60 * 60;
             int minutes = (int) (seconds / 60);
             seconds -= minutes * 60;
             return String.format(Locale.ROOT, "%02d:%02d:%04.1f", hours, minutes, seconds);
+        }
+
+        public double offsetToSeconds(int offset) {
+            return offset * ChunkCounter.MS_PER_FINGERPRINT / 1000.0;
+        }
+
+        /**
+         * @param offset index in the fingerprints array.
+         * @return offset in human time (hh:mm:ss).
+         */
+        private String offsetToHumanTime(int offset) {
+            return secondsToHumanTime(offsetToSeconds(offset));
         }
 
         /**
@@ -186,14 +229,17 @@ public class ChunkCounter {
         public String toString() {
             return "Hit{" +
                    "recordingID='" + recordingID + '\'' +
+                   ", score(c=" + toStringScoreMatch(collapsedOffset, collapsedScore) +
+                   ", r=" + toStringScoreMatch(rawOffset, rawScore) + ")" +
+                   ", matches=" + matches +
                    ", recordingChunkID=" + recordingChunkID +
                    ", matchAreaStart=" + getMatchAreaStartHumanTime() +
-                   ", matchArea=" + matchAreaStartFingerprint +
-                   "->" + matchAreaEndFingerprint +
-                   ", matches=" + matches +
-                   ", score(c=" + String.format(Locale.ROOT, "%.2f", collapsedScore) +
-                   ", r=" + String.format(Locale.ROOT, "%.2f", rawScore) +
+                   ", matchArea=" + matchAreaStartFingerprint + "->" + matchAreaEndFingerprint +
                    '}';
+        }
+
+        private String toStringScoreMatch(int offset, double score) {
+           return  String.format(Locale.ROOT, "[%.2f, %s]", score, offsetToHumanTime(offset));
         }
 
     }
