@@ -52,7 +52,27 @@ class CollapsedDiscoveryTest {
     // Random recordings with no special match for the snippets
     final static String R_ROOT = "/home/te/projects/java-xcorrsound/samples/random/";
     final static String[] R_RECORDINGS = new String[]{ // Under R_ROOT
-            "f2fdb142-0cc3-4b51-815b-45aa6fbd0d89.mp3"
+            "f2fdb142-0cc3-4b51-815b-45aa6fbd0d89.mp3",
+            "f20d92e2-61a3-492d-9767-1ecfa263a5a0.mp3",
+            "f219404e-d2a4-45d4-8035-75991ce88a90.mp3",
+            "f23737f8-35db-4e49-9c1f-5316cc3b5059.mp3",
+            "f237404c-8081-41a2-a7ab-7528f943eb81.mp3",
+            "f237533c-cf60-4c21-be51-bfe00771c4c1.mp3",
+            "f23799a4-ae90-4aa0-91b1-006239ac4940.mp3",
+            "f237de62-4e8b-4f38-ba5a-8e9b49bb923b.mp3",
+            "f2613da2-dcf6-4996-b870-e83fb3a30f94.mp3",
+            "f2614493-2f8a-4cc7-a2ad-7efa40d7dcfa.mp3",
+            "f261face-dd71-4bfe-98c5-8d105a5439fb.mp3",
+            "f284903e-8e70-42d5-8206-808310acc42c.mp3",
+            "f284c0c2-b60c-4125-b0e1-142d6333362e.mp3",
+            "f2c09341-511f-4cbb-9c66-296a6b1341b0.mp3",
+            "f2c0c99c-c72a-4f03-9812-4fc6a56ec5c3.mp3",
+            "f2d4835e-257d-4a17-a209-f43933878c98.mp3",
+            "f2d4a42c-4cf0-4233-a51b-b5322de6e7f6.mp3",
+            "f2d4d334-9bda-4798-91c4-91714a43128e.mp3",
+            "f2d4ea80-432b-4d3c-b9d1-06ecd64e03e8.mp3",
+            "f2e05513-47a9-4913-addd-cf373dc1b5c1.mp3",
+            "f2e07d05-657f-4d7c-9bb8-125d2efdbdb5.mp3"
     };
 
     final static String X_SOURCE_HQ = "last_xmas_chunk1.mp3"; // In resources
@@ -216,7 +236,7 @@ class CollapsedDiscoveryTest {
 
     @Test
     void chunkedFind() throws IOException {
-        final int TOP_X = 20;
+        final int TOP_X = 30;
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.every_other_0;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
@@ -236,8 +256,9 @@ class CollapsedDiscoveryTest {
         addRecordings(cd, X_ROOT, X_MATCHING);
         addRecordings(cd, B_ROOT, B_MATCHING);
 
-        System.out.println("Chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
+        System.out.println("Record chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
+        System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
         topChunked(cd, X_SOURCE_HQ, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
         topChunked(cd, X_SOURCE_LQ, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
         topChunked(cd, B_SOURCE, TOP_X, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
@@ -250,20 +271,26 @@ class CollapsedDiscoveryTest {
         List<List<ChunkCounter.Hit>> chunkHits =
                 cd.findCandidates(getResource(snippet), topX, PRE_SKIP, POST_SKIP, sChunkLength, sChunkOverlap);
         long[] snippetPrints = cd.getRawPrints(Path.of(getResource(snippet)));
-        System.out.println("*** Hits for " + snippet + " with " + snippetPrints.length + " prints " +
+        System.out.println("\n*** Hits for " + snippet + " with " + snippetPrints.length + " prints " +
                            "(" + snippetPrints.length*ChunkCounter.MS_PER_FINGERPRINT/1000 + " seconds)");
         for (int i = 0 ; i < chunkHits.size() ; i++) {
             //chunkHits.get(i).sort(Comparator.comparing(ChunkCounter.Hit::getRecordingID).thenComparingInt(ChunkCounter.Hit::getMatchAreaStartFingerprint));
             List<ChunkCounter.Hit> hits = chunkHits.get(i);
             System.out.println("chunk " + i);
-            System.out.println(" - Sorted by matches");
-            hits.forEach(System.out::println);
-            System.out.println(" - Sorted by score, duplicate recordings removed");
 
+            System.out.println(" - Sorted by matches");
+            hits.stream().
+                    map(Object::toString).
+                    map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", "")).
+                    forEach(System.out::println);
+
+            System.out.println(" - Sorted by score, duplicate recordings removed");
             final Set<String> seenRecordings = new HashSet<>();
             hits.stream().
                     filter(hit -> seenRecordings.add(hit.getRecordingID())).
                     sorted(Comparator.comparing(ChunkCounter.Hit::getCollapsedScore).reversed()).
+                    map(Object::toString).
+                    map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", "")).
                     forEach(System.out::println);
         }
     }

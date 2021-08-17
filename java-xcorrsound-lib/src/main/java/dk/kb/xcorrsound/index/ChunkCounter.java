@@ -172,7 +172,7 @@ public class ChunkCounter {
             seconds -= hours * 60 * 60;
             int minutes = (int) (seconds / 60);
             seconds -= minutes * 60;
-            return String.format(Locale.ROOT, "%03d:%02d:%04.1f", hours, minutes, seconds);
+            return String.format(Locale.ROOT, "%02d:%02d:%04.1f", hours, minutes, seconds);
         }
 
         /**
@@ -188,11 +188,11 @@ public class ChunkCounter {
                    "recordingID='" + recordingID + '\'' +
                    ", recordingChunkID=" + recordingChunkID +
                    ", matchAreaStart=" + getMatchAreaStartHumanTime() +
-                   ", matchAreaStartFP=" + matchAreaStartFingerprint +
-                   ", matchAreaEndFP=" + matchAreaEndFingerprint +
+                   ", matchArea=" + matchAreaStartFingerprint +
+                   "->" + matchAreaEndFingerprint +
                    ", matches=" + matches +
-                   ", collapsedScore=" + collapsedScore +
-                   ", rawScore=" + rawScore +
+                   ", score(c=" + String.format(Locale.ROOT, "%.2f", collapsedScore) +
+                   ", r=" + String.format(Locale.ROOT, "%.2f", rawScore) +
                    '}';
         }
 
