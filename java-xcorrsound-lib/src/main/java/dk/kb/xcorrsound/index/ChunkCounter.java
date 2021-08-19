@@ -54,8 +54,19 @@ public class ChunkCounter {
     }
 
     /**
-     * Find the topX counter entries with the highest number and translate the to recordings.
-     * Note that the same recording can be returned multiple times; for different chunks in the recording.
+     * For each chunk in chunks, adjust the matching position in counters with the given delta.
+     * @param chunks marked chunks.
+     * @param delta the amount to add to the counter.
+     */
+    public void add(ChunkIDs chunks, int delta) {
+        if (delta != 0) {
+            chunks.stream().forEach(chunkID -> counters[chunkID] += delta);
+        }
+    }
+
+    /**
+     * Find the topX counter entries with the highest number of matches and translate them to recordings.
+     * Note that the same recording can be returned multiple times for different chunks in the recording.
      * @param topX the number of chunks to locate.
      * @return topX matches in descending order.
      */

@@ -70,8 +70,7 @@ public class CollapsedDiscovery {
      * Default setup of CollapsedDiscovery.
      */
     public CollapsedDiscovery() {
-        this(CHUNK_LENGTH_DEFAULT, CHUNK_OVERLAP_DEFAULT, Collapsor.COLLAPSE_STRATEGY_DEFAULT, CACHE_PRINTS_DEFAULT,
-             new PrintHandler());
+        this(CHUNK_LENGTH_DEFAULT, CHUNK_OVERLAP_DEFAULT, Collapsor.COLLAPSE_STRATEGY_DEFAULT);
     }
 
     /**

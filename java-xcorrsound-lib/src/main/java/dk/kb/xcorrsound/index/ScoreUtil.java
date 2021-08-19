@@ -27,18 +27,31 @@ public class ScoreUtil {
     @FunctionalInterface
     public interface Scorer16 {
         /**
-         * @return the score for the given part of the snippet in given part of the record.
+         * @return the Match with the best score for the given part of the snippet in given part of the record.
          */
-        double score(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd);
+        Match score(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd);
     }
 
     // The number of significant bits are not fixed here. It is up to the implementation
     @FunctionalInterface
     public interface ScorerLong {
         /**
-         * @return the score for the given part of the snippet in given part of the record.
+         * @return the Match with the best score for the given part of the snippet in given part of the record.
          */
-        double score(long[] snippet, int snipStart, int snipEnd, long[] recording, int recStart, int recEnd);
+        Match score(long[] snippet, int snipStart, int snipEnd, long[] recording, int recStart, int recEnd);
+    }
+
+    /**
+     * Representation of a score and the position of the match in a recording.
+     */
+    public static class Match {
+        public final int offset;
+        public final double score;
+
+        public Match(int offset, double score) {
+            this.offset = offset;
+            this.score = score;
+        }
     }
 
     /**
@@ -54,9 +67,9 @@ public class ScoreUtil {
      * @param recEnd     index of the last fingerprint in the recording to search, exclusive.
      * @param exhaustive if true, the sliding window in the recording continues until it is only 1 fingerprint long.
      *                   if false, the sliding window stops when its right edge reaches recEnd.
-     * @return
+     * @return a match with offset and score for the best match for the snippet in the recording.
      */
-    public static double findBestMatch16(
+    public static Match findBestMatch16(
             char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd, boolean exhaustive) {
         if (snipStart < 0) {
             throw new IllegalArgumentException("Illegal snippet area start: snipStart=" + snipStart);
@@ -73,6 +86,7 @@ public class ScoreUtil {
         double bestFraction = 0.0;
 
         // Extremely dumb brute force
+        // TODO: Introduce early termination
         //System.out.println("Checking snipStart=" +snipStart + ", snipEnd=" + snipEnd + ", recStart=" + recStart + ", recEnd=" + recEnd + ", slidingEnd=" + slidingStartMax);
         for (int slidingOrigo = recStart ; slidingOrigo < slidingStartMax ; slidingOrigo++) {
             int maxSlidingWindowLength = recEnd-slidingOrigo;
@@ -84,13 +98,14 @@ public class ScoreUtil {
             for (int i = snipStart; i < realSnipEnd ; i++) {
                 nonMatchingBits += Long.bitCount(recording[slidingOrigo-snipStart+i] ^ snippet[i]);
             }
+            // The fraction of bits in the snippet that are equal to the bits in the recording window
             double fraction = 1 - (1.0 * nonMatchingBits / ((realSnipEnd-snipStart) * 16));
             if (fraction > bestFraction) {
                 bestFraction = fraction;
                 bestStartPos = slidingOrigo;
             }
         }
-        return bestFraction;
+        return new Match(bestStartPos, bestFraction);
     }
 
     /**
@@ -106,9 +121,9 @@ public class ScoreUtil {
      * @param recEnd     index of the last fingerprint in the recording to search, exclusive.
      * @param exhaustive if true, the sliding window in the recording continues until it is only 1 fingerprint long.
      *                   if false, the sliding window stops when its right edge reaches recEnd.
-     * @return
+     * @return a match with offset and score for the best match for the snippet in the recording.
      */
-    public static double findBestMatchLong(
+    public static Match findBestMatchLong(
             long[] snippet, int snipStart, int snipEnd, long[] recording, int recStart, int recEnd,
             int significantBits,
             boolean exhaustive) {
@@ -144,19 +159,19 @@ public class ScoreUtil {
                 bestStartPos = slidingOrigo;
             }
         }
-        return bestFraction;
+        return new Match(bestStartPos, bestFraction);
     }
 
-    public static double matchingBits16Exhaustive(
+    public static Match matchingBits16Exhaustive(
             char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
         return findBestMatch16(snippet, snipStart, snipEnd, recording, recStart, recEnd, true);
     }
 
-    public static double matchingBits16NonExhaustive(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
+    public static Match matchingBits16NonExhaustive(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
         return findBestMatch16(snippet, snipStart, snipEnd, recording, recStart, recEnd, false);
     }
 
-    public static double matchingBits32NonExhaustive(long[] snippet, int snipStart, int snipEnd, long[] recording, int recStart, int recEnd) {
+    public static Match matchingBits32NonExhaustive(long[] snippet, int snipStart, int snipEnd, long[] recording, int recStart, int recEnd) {
         return findBestMatchLong(snippet, snipStart, snipEnd, recording, recStart, recEnd, 32, false);
     }
 
@@ -171,8 +186,8 @@ public class ScoreUtil {
         }
 
         @Override
-        public double score(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
-            return 0;
+        public Match score(char[] snippet, int snipStart, int snipEnd, char[] recording, int recStart, int recEnd) {
+            return new Match(recStart, score);
         }
 
         public double getConstantScore() {
@@ -198,8 +213,8 @@ public class ScoreUtil {
         }
 
         @Override
-        public double score(long[] snippet, int snipStart, int snipEnd, long[] recording, int recStart, int recEnd) {
-            return 0;
+        public Match score(long[] snippet, int snipStart, int snipEnd, long[] recording, int recStart, int recEnd) {
+            return new Match(recStart, 0);
         }
 
         public double getConstantScore() {
