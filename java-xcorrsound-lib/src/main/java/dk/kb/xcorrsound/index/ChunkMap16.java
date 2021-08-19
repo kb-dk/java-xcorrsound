@@ -45,7 +45,7 @@ public class ChunkMap16 {
 
     // Maps from fingerprint to chunks containing the fingerprint
     private final ChunkIDs[] chunkIDMap = new ChunkIDs[65536]; // chunkIDs with fingerprint as index
-    private final List<String> recordIDs = new ArrayList<>(); // recordIDs with chunksID as index
+    private final List<Sound> recordings = new ArrayList<>();
 
     public ChunkMap16(int chunkLength, int chunkOverlap) {
         this(chunkLength, chunkOverlap, DEFAULT_INITIAL_CHUNK_COUNT);
@@ -60,12 +60,10 @@ public class ChunkMap16 {
 
     /**
      * Add the given record, represented as an ID, with corresponding fingerprints.
-     * @param recordingID  an unique ID for a recording.
-     * @param fingerprints fingerprints (probably collapsed from 32 bit fingerprints) for the recording.
+     * @param sound        a representation of a sound.
+     * @param fingerprints reduced fingerprints (probably collapsed from 32 bit fingerprints) for the recording.
      */
-    public void addRecording(String recordingID, char[] fingerprints) {
-        recordingID = recordingID.intern();
-
+    public void addRecording(Sound sound, char[] fingerprints) {
         // Ensure there is room in the structures
         int totalChunks = getNumChunks() + fingerprints.length / chunkLength + 1;
         if (chunkIDMap[0].extend(totalChunks)) {
@@ -75,8 +73,8 @@ public class ChunkMap16 {
         // Iterate the chunks and update the bitmaps for all fingerprints in the chunk + overlap into the next chunk
         for (int chunkOrigo = 0 ; chunkOrigo < fingerprints.length ; chunkOrigo += chunkLength) {
             int max = Math.min(fingerprints.length, chunkOrigo + chunkLength + chunkOverlap);
-            int chunkID = recordIDs.size();
-            recordIDs.add(recordingID);
+            int chunkID = recordings.size();
+            recordings.add(sound);
             for (int pos = chunkOrigo ; pos < max ; pos++) {
                 int fingerprint = fingerprints[pos];
                 chunkIDMap[fingerprint].set(chunkID);
@@ -91,7 +89,7 @@ public class ChunkMap16 {
      * @return a counter for all chunk matches.
      */
     public ChunkCounter countMatches(char[] fingerprints) {
-        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordIDs, chunkLength, chunkOverlap);
+        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordings, chunkLength, chunkOverlap);
         for (char fingerprint: fingerprints) {
             counter.add(getMatchingChunksIDs(fingerprint));
         }
@@ -108,7 +106,7 @@ public class ChunkMap16 {
      * @return a counter for all chunk matches.
      */
     public ChunkCounter countMatches(char[] fingerprints, int areaStart, int areaEnd) {
-        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordIDs, chunkLength, chunkOverlap);
+        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordings, chunkLength, chunkOverlap);
         areaEnd = Math.min(areaEnd, fingerprints.length);
         for (int index = areaStart ; index < areaEnd ; index++) {
             counter.add(getMatchingChunksIDs(fingerprints[index]));
@@ -122,7 +120,7 @@ public class ChunkMap16 {
 
 
     public int getNumChunks() {
-        return recordIDs.size();
+        return recordings.size();
     }
 
     public int getChunkLength() {
@@ -132,4 +130,5 @@ public class ChunkMap16 {
     public int getChunkOverlap() {
         return chunkOverlap;
     }
+
 }

@@ -54,19 +54,40 @@ import java.util.List;
 public class CollapsedDiscovery {
     private static final Logger log = LoggerFactory.getLogger(CollapsedDiscovery.class);
 
-    ;
-
-    public static final int CHUNK_LENGTH_DEFAULT = 51600; // 10 minutes
+    public static final int CHUNK_LENGTH_DEFAULT = 25000; //  5 minutes
     public static final int CHUNK_OVERLAP_DEFAULT = 1000; // 10 seconds
+    public static final boolean CACHE_PRINTS_DEFAULT = true;
 
     ScoreUtil.Scorer16 collapsedScorer = new ScoreUtil.ConstantScorer16(0.0); // Optional calculator of scores
     ScoreUtil.ScorerLong rawScorer = new ScoreUtil.ConstantScorerLong(0.0); // Optional calculator of scores
 
     ChunkMap16 chunkMap;
     Collapsor collapsor;
+    PrintHandler printHandler;
+    boolean cachefingerprints;
 
+    /**
+     * Default setup of CollapsedDiscovery.
+     */
     public CollapsedDiscovery() {
-        this(CHUNK_LENGTH_DEFAULT, CHUNK_OVERLAP_DEFAULT, Collapsor.COLLAPSE_STRATEGY_DEFAULT);
+        this(CHUNK_LENGTH_DEFAULT, CHUNK_OVERLAP_DEFAULT, Collapsor.COLLAPSE_STRATEGY_DEFAULT, CACHE_PRINTS_DEFAULT,
+             new PrintHandler());
+    }
+
+    /**
+     * Create a CollapsedDiscovery where fingerprints are collapsed using collapseStrategy and recordings are
+     * searched in chunks of chunkLength fingerprints.
+     * The {@link #printHandler} will be the default instantiation of {@link PrintHandler}.
+     * @param chunkLength  the number of collapsed fingerprints in each chunk.
+     * @param chunkOverlap the number of collapsed fingerprints to search beyond the given chunkLength.
+     *                     This should at least be the number of fingerprints that is generated for a given search
+     *                     snippet to ensure full match.
+     * @param collapseStrategy how to reduce the 32 bit fingerprints to at most 16 bits.
+     * @param cacheFingerprints if true, generated fingerprints are persistently cached.
+     */
+    public CollapsedDiscovery(int chunkLength, int chunkOverlap, Collapsor.COLLAPSE_STRATEGY collapseStrategy,
+                              boolean cacheFingerprints) {
+        this(chunkLength, chunkOverlap, collapseStrategy, cacheFingerprints, new PrintHandler());
     }
 
     /**
@@ -77,10 +98,15 @@ public class CollapsedDiscovery {
      *                     This should at least be the number of fingerprints that is generated for a given search
      *                     snippet to ensure full match.
      * @param collapseStrategy how to reduce the 32 bit fingerprints to at most 16 bits.
+     * @param cacheFingerprints if true, generated fingerprints are persistently cached.
+     * @param printHandler used for generating missing fingerprints.
      */
-    public CollapsedDiscovery(int chunkLength, int chunkOverlap, Collapsor.COLLAPSE_STRATEGY collapseStrategy) {
+    public CollapsedDiscovery(int chunkLength, int chunkOverlap, Collapsor.COLLAPSE_STRATEGY collapseStrategy,
+                              boolean cacheFingerprints, PrintHandler printHandler) {
         collapsor = new Collapsor(collapseStrategy);
         chunkMap = new ChunkMap16(chunkLength, chunkOverlap);
+        this.cachefingerprints = cacheFingerprints;
+        this.printHandler = printHandler;
     }
 
     /**
@@ -90,13 +116,47 @@ public class CollapsedDiscovery {
      * Multiple additions of the same recording will result in duplicate entries.
      * The fingerprints will be cached on storage.
      * @param recordingPath full path to a recording in MP3 or WAV format.
-     * @throws IOException if fingerprints for the recording could not be generated.
+     * @throws IOException if fingerprints for the recording could not be produced.
      */
     public void addRecording(String recordingPath) throws IOException {
-        long[] rawPrints = getRawPrints(Path.of(recordingPath));
-        char[] collapsed = collapsor.getCollapsed(rawPrints);
-        chunkMap.addRecording(recordingPath, collapsed);
-        log.debug("Added recording '" + recordingPath + "' with " + collapsed.length + " fingerprints");
+        addRecording(toSound(recordingPath));
+    }
+
+    /**
+     * Take a file with already generated fingerprints, generate collapsed prints from the stated range and update the
+     * lookup structures with the result. After this the recording can be searched using {@link #findCandidates}.
+     * @param recordingID  unique ID for the recording. This is often a file path, but that is not a requirement.
+     * @param fingerprints pre-calculated fingerprints for the recording.
+     * @param offset offset into the fingerprints for the recording.
+     * @param length the number of fingerprints for the recording.
+     * @throws IOException if the fingerprints for the sound could not be accessed.
+     */
+    public void addRecording(String recordingID, Path fingerprints, int offset, int length) throws IOException {
+        addRecording(new Sound.PrintedSound(recordingID, fingerprints, offset, length));
+    }
+
+    /**
+     * Take a Sound, get the raw fingerprints from {@link Sound#getRawPrints()}, collapses them with {@link #collapsor}
+     * and update the lookup structures with the result.
+     * After this the recording can be searched using {@link #findCandidates}.
+     * @param sound the recording to index.
+     * @throws IOException if the fingerprints for the sound could not be produced.
+     */
+    public void addRecording(Sound sound) throws IOException {
+        char[] collapsed = collapsor.getCollapsed(sound.getRawPrints());
+        chunkMap.addRecording(sound, collapsed);
+        log.debug("Added " + sound);
+    }
+
+    /**
+     * Convenience method for producing a sound using the given path, {@link #cachefingerprints} and
+     * {@link #printHandler}.
+     * @param recordingPath path to a sound file.
+     * @return a Sound object, capable of providing fingerprints for the file.
+     * @throws FileNotFoundException if the sound file could not be found.
+     */
+    public Sound toSound(String recordingPath) throws FileNotFoundException {
+        return new Sound.PathSound(Path.of(recordingPath), cachefingerprints, printHandler);
     }
 
     public ScoreUtil.Scorer16 getCollapsedScorer() {
@@ -127,7 +187,8 @@ public class CollapsedDiscovery {
      * @throws IOException if it was not possible to generate fingerprints from snippetPath.
      */
     public List<ChunkCounter.Hit> findCandidates(String snippetPath, int topX) throws IOException {
-        char[] collapsed = getCollapsed(Path.of(snippetPath));
+        Sound snippet = toSound(snippetPath);
+        char[] collapsed = collapsor.getCollapsed(snippet.getRawPrints());
 
         if (collapsed.length > chunkMap.getChunkOverlap()) {
             log.warn("Attempting search for snippet with {} fingerprints with a setup where the overlap between " +
@@ -154,7 +215,9 @@ public class CollapsedDiscovery {
     public List<List<ChunkCounter.Hit>> findCandidates(
             String snippetPath, int topX, int preSkip, int postSkip, int chunkLength, int chunkOverlap)
             throws IOException {
-        long[] snipRaw = getRawPrints(Path.of(snippetPath));
+
+        Sound snippet = new Sound.PathSound(Path.of(snippetPath), cachefingerprints, printHandler);
+        long[] snipRaw = snippet.getRawPrints();
         char[] snipCollapsed = collapsor.getCollapsed((snipRaw));
 
         if (preSkip + postSkip >= snipCollapsed.length) {
@@ -174,7 +237,7 @@ public class CollapsedDiscovery {
             int snipEnd = Math.min(snipStart + chunkLength + chunkOverlap, snipCollapsed.length-postSkip);
             List<ChunkCounter.Hit> hits = chunkMap.countMatches(snipCollapsed, snipStart, snipEnd).getTopMatches(topX);
             for (ChunkCounter.Hit hit: hits) {
-                long[] recRaw = getRawPrints(Path.of(hit.getRecordingID()));
+                long[] recRaw = hit.getRecording().getRawPrints(); // TODO: Utilize hit.getMatchAreaStartFingerprint()
                 char[] recCollapsed = collapsor.getCollapsed((recRaw));
                 hit.setCollapsedScore(collapsedScorer.score(
                         snipCollapsed, snipStart, snipEnd, recCollapsed, hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint()));
@@ -189,98 +252,6 @@ public class CollapsedDiscovery {
                      "chunks is only {} fingerprints. This increases the probability of false negatives",
                      collapsed.length, chunkMap.getChunkOverlap());
         }*/
-    }
-
-    /**
-     * Processes the given file using {@link XCorrSoundFacade#generateFingerPrintFromSoundFile} and returns the result.
-     *
-     * The generated fingerprints are cached for subsequent calls.
-     * @param recording a sound file.
-     * @return fingerprints for the recording.
-     * @throws IOException if the file could not be loaded or processed.
-     */
-    long[] getRawPrints(final Path recording) throws IOException {
-        if (!Files.exists(recording)) {
-            throw new FileNotFoundException("The file '" + recording + "' does not exist");
-        }
-        final Path processedSource = recording.toString().endsWith("mp3") || recording.toString().endsWith("wav") ?
-                getRawPrintsPath(recording.toString()) :
-                recording;
-        if (!Files.exists(processedSource)) {
-            try {
-                generatePrints(recording.toString());
-            } catch (Exception e) {
-                throw new IOException("Exception generating fingerprints for '" + recording + "'", e);
-            }
-            if (!Files.exists(processedSource)) {
-                throw new IOException("Unable to generate fingerprints for '" + recording + "'");
-            }
-        }
-
-        try {
-            int numPrints = (int) (Files.size(processedSource) / 4); // 32 bits/fingerprint
-            long[] fingerprints = new long[numPrints];
-            log.debug("Loading {} fingerprints from '{}'", numPrints, processedSource);
-            try (DataInputStream of = new DataInputStream(IOUtils.buffer(
-                    FileUtils.openInputStream(processedSource.toFile())))) {
-                for (int i = 0; i < numPrints; i++) {
-                    fingerprints[i] = Integer.toUnsignedLong(Integer.reverseBytes(of.readInt()));
-                }
-            }
-            return fingerprints;
-        } catch (Exception e) {
-            throw new IOException("Failed loading fingerprints for '" + recording + "'", e);
-        }
-    }
-
-
-    /**
-     * Extracts raw fingerprints using {@link #getRawPrints(Path)} and collapses them using {@link #collapsor}.
-     * @param recording a sound file.
-     * @return collapsed fingerprints for the recording.
-     * @throws IOException
-     */
-    char[] getCollapsed(final Path recording) throws IOException {
-        long[] rawPrints = getRawPrints(recording);
-        return collapsor.getCollapsed(rawPrints);
-    }
-
-    void generatePrints(String soundFile) {
-        final Path rawPrints = getRawPrintsPath(soundFile);
-        if (Files.exists(rawPrints)) {
-            log.debug("Fingerprints for '{}' already exists", rawPrints);
-            return;
-        }
-        //String soundChunk = Thread.currentThread().getContextClassLoader().getResource("clip_P3_1400_1600_040806_001-java.mp3").getFile(); // 238 seconds
-        long startTime = System.currentTimeMillis();
-        log.info("Analysing '{}'", soundFile);
-        long[] raw;
-        try {
-            raw = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundFile);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed generating fingerprint for '" + soundFile + "'", e);
-        }
-        log.info("Calculated {} fingerprints in {} seconds",
-                 raw.length, (System.currentTimeMillis()-startTime)/1000);
-        try {
-            store(raw, rawPrints);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed storing " + raw.length + " prints for '" + soundFile + "'", e);
-        }
-    }
-
-    private void store(long[] rawFingerprints, Path destination) throws IOException {
-        log.info("Storing {} fingerprints to '{}'", rawFingerprints.length, destination);
-        try (DataOutputStream of = new DataOutputStream(IOUtils.buffer(FileUtils.openOutputStream(destination.toFile(), false)))) {
-            for (long fingerprint: rawFingerprints) {
-                of.writeInt(Integer.reverseBytes((int) fingerprint)); // To keep it compatible with the c version(?)
-            }
-        }
-    }
-
-    private Path getRawPrintsPath(String soundFile) {
-        final String base = soundFile.replaceAll("[.][^.]*$", "");
-        return Path.of(base + ".rawPrints");
     }
 
 }

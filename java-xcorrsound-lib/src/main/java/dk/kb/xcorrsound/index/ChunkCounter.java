@@ -28,7 +28,7 @@ public class ChunkCounter {
 
     public static final double MS_PER_FINGERPRINT = 11.62; // TODO: Get the exact value
 
-    private final List<String> recordIDs; // Needed for construction of Hits in {@link #getTopMatches}
+    private final List<Sound> recordings; // Needed for construction of Hits in {@link #getTopMatches}
     private final int[] counters;
     private final int numChunks;
 
@@ -36,10 +36,10 @@ public class ChunkCounter {
     private final int chunkLength;
     private final int chunkOverlap;
 
-    public ChunkCounter(int numChunks, List<String> recordIDs, int chunkLength, int chunkOverlap) {
+    public ChunkCounter(int numChunks, List<Sound> recordings, int chunkLength, int chunkOverlap) {
         this.numChunks = numChunks;
         this.counters = new int[numChunks];
-        this.recordIDs = recordIDs;
+        this.recordings = recordings;
 
         this.chunkLength = chunkLength;
         this.chunkOverlap = chunkOverlap;
@@ -76,7 +76,8 @@ public class ChunkCounter {
             int recordChunkID = chunkIDtoRecordChunk(chunkID);
             int matchAreaStart = recordChunkID*chunkLength;
             int matchAreaEnd = matchAreaStart + chunkLength + chunkOverlap;
-            hits.add(new Hit(recordIDs.get(chunkID), recordChunkID, matchAreaStart, matchAreaEnd, matches));
+            // TODO: Extend with more info
+            hits.add(new Hit(recordings.get(chunkID), recordChunkID, matchAreaStart, matchAreaEnd, matches));
         }
         return hits;
     }
@@ -86,16 +87,16 @@ public class ChunkCounter {
      * @return the chunkID in the record that corresponds to the globalChunkID.
      */
     private int chunkIDtoRecordChunk(int globalChunkID) {
-        String recordID = recordIDs.get(globalChunkID);
+        Sound sound = recordings.get(globalChunkID);
         int recordChunk = globalChunkID;
-        while (recordChunk > 0 && recordIDs.get(recordChunk-1).equals(recordID)) {
+        while (recordChunk > 0 && recordings.get(recordChunk - 1).equals(sound)) {
             --recordChunk;
         }
         return globalChunkID-recordChunk;
     }
 
     public static class Hit {
-        private final String recordingID;
+        private final Sound recording;
         private final int recordingChunkID;
         private final int matches;
         private final int matchAreaStartFingerprint; // Inclusive
@@ -104,9 +105,9 @@ public class ChunkCounter {
         private double collapsedScore = 0.0; // Optional score
         private double rawScore = 0.0; // Optional score
 
-        public Hit(String recordingID, int chunkID,
+        public Hit(Sound recording, int chunkID,
                    int matchAreaStartFingerprint, int matchAreaEndFingerprint, int matches) {
-            this.recordingID = recordingID;
+            this.recording = recording;
             this.recordingChunkID = chunkID;
             this.matches = matches;
             this.matchAreaStartFingerprint = matchAreaStartFingerprint;
@@ -115,10 +116,10 @@ public class ChunkCounter {
         }
 
         /**
-         * @return the recording ID, which should be the full file path.
+         * @return the recording where the match occurred.
          */
-        public String getRecordingID() {
-            return recordingID;
+        public Sound getRecording() {
+            return recording;
         }
 
         /**
@@ -185,7 +186,7 @@ public class ChunkCounter {
         @Override
         public String toString() {
             return "Hit{" +
-                   "recordingID='" + recordingID + '\'' +
+                   "recording='" + recording + '\'' +
                    ", recordingChunkID=" + recordingChunkID +
                    ", matchAreaStart=" + getMatchAreaStartHumanTime() +
                    ", matchArea=" + matchAreaStartFingerprint +

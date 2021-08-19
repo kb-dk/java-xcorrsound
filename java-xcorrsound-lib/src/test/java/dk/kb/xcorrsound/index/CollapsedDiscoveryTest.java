@@ -130,9 +130,9 @@ class CollapsedDiscoveryTest {
         dumpSnippetSum(B_SOURCE);
     }
     void dumpSnippet(String snippetID) throws IOException {
-        CollapsedDiscovery cd = new CollapsedDiscovery(10000, 2000, Collapsor.COLLAPSE_STRATEGY.or_pairs_16);
-        String snippet = getResource(snippetID);
-        long[] rRaw = cd.getRawPrints(Path.of(snippet));
+        CollapsedDiscovery cd = new CollapsedDiscovery(10000, 2000, Collapsor.COLLAPSE_STRATEGY.or_pairs_16, true);
+        Sound snippet = cd.toSound(getResource(snippetID));
+        long[] rRaw = snippet.getRawPrints();
         char[] rCollapsed = cd.collapsor.getCollapsed(rRaw);
         Arrays.sort(rCollapsed);
         for (int i = 0 ; i < rCollapsed.length ; i++) {
@@ -145,9 +145,9 @@ class CollapsedDiscoveryTest {
 
     void dumpSnippetSum(String snippetID) throws IOException {
         System.out.println("Dumping count for collapsed for " + snippetID);
-        CollapsedDiscovery cd = new CollapsedDiscovery(10000, 2000, Collapsor.COLLAPSE_STRATEGY.or_pairs_16);
-        String snippet = getResource(snippetID);
-        char[] rCollapsed = cd.getCollapsed(Path.of(snippet));
+        CollapsedDiscovery cd = new CollapsedDiscovery(10000, 2000, Collapsor.COLLAPSE_STRATEGY.or_pairs_16, true);
+        Sound snippet = cd.toSound(getResource(snippetID));
+        char[] rCollapsed = cd.collapsor.getCollapsed(snippet.getRawPrints());
         Arrays.sort(rCollapsed);
         int last = -1;
         int count = 0;
@@ -180,10 +180,14 @@ class CollapsedDiscoveryTest {
     }
 
     private int[] countTotalMatches(String recordingPath, String snippetPath, int minLength, Collapsor.COLLAPSE_STRATEGY strategy) throws IOException {
-        CollapsedDiscovery cd = new CollapsedDiscovery(1000, 100, strategy);
-        long[] rRaw = cd.getRawPrints(Path.of(recordingPath));
+        CollapsedDiscovery cd = new CollapsedDiscovery(1000, 100, strategy, true);
+
+        Sound recording = cd.toSound(recordingPath);
+        long[] rRaw = recording.getRawPrints();
         char[] rCollapsed = cd.collapsor.getCollapsed(rRaw);
-        long[] sRaw = cd.getRawPrints(Path.of(snippetPath));
+
+        Sound snippet = cd.toSound(snippetPath);
+        long[] sRaw = snippet.getRawPrints();
         char[] sCollapsed = cd.collapsor.getCollapsed(sRaw);
 
         int rawMatches = 0;
@@ -218,7 +222,7 @@ class CollapsedDiscoveryTest {
         final int CHUNK_OVERLAP = 2000;
 
 
-        CollapsedDiscovery cd = new CollapsedDiscovery(CHUNK_LENGTH, CHUNK_OVERLAP, STRATEGY);
+        CollapsedDiscovery cd = new CollapsedDiscovery(CHUNK_LENGTH, CHUNK_OVERLAP, STRATEGY, true);
         addRecordings(cd, X_ROOT, X_MATCHING);
         addRecordings(cd, B_ROOT, B_MATCHING);
 
@@ -246,7 +250,7 @@ class CollapsedDiscoveryTest {
         final int S_CHUNK_LENGTH = 500;
         final int S_CHUNK_OVERLAP = 0;
 
-        CollapsedDiscovery cd = new CollapsedDiscovery(R_CHUNK_LENGTH, R_CHUNK_OVERLAP, STRATEGY).
+        CollapsedDiscovery cd = new CollapsedDiscovery(R_CHUNK_LENGTH, R_CHUNK_OVERLAP, STRATEGY, true).
                 setCollapsedScorer(ScoreUtil::matchingBits16NonExhaustive).
                 setRawScorer(ScoreUtil::matchingBits32NonExhaustive);
 
@@ -270,7 +274,7 @@ class CollapsedDiscoveryTest {
 
         List<List<ChunkCounter.Hit>> chunkHits =
                 cd.findCandidates(getResource(snippet), topX, PRE_SKIP, POST_SKIP, sChunkLength, sChunkOverlap);
-        long[] snippetPrints = cd.getRawPrints(Path.of(getResource(snippet)));
+        long[] snippetPrints = new PrintHandler().getRawPrints(Path.of(getResource(snippet)), true);
         System.out.println("\n*** Hits for " + snippet + " with " + snippetPrints.length + " prints " +
                            "(" + snippetPrints.length*ChunkCounter.MS_PER_FINGERPRINT/1000 + " seconds)");
         for (int i = 0 ; i < chunkHits.size() ; i++) {
@@ -287,7 +291,7 @@ class CollapsedDiscoveryTest {
             System.out.println(" - Sorted by score, duplicate recordings removed");
             final Set<String> seenRecordings = new HashSet<>();
             hits.stream().
-                    filter(hit -> seenRecordings.add(hit.getRecordingID())).
+                    filter(hit -> seenRecordings.add(hit.getRecording().getID())).
                     sorted(Comparator.comparing(ChunkCounter.Hit::getCollapsedScore).reversed()).
                     map(Object::toString).
                     map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", "")).

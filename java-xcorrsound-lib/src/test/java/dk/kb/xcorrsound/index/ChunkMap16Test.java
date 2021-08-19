@@ -2,6 +2,7 @@ package dk.kb.xcorrsound.index;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -29,8 +30,8 @@ class ChunkMap16Test {
         String rec1 = "abcabd";
         String rec2 = "adefghi";
 
-        chunkMap.addRecording(rec1, rec1.toCharArray());
-        chunkMap.addRecording(rec2, rec2.toCharArray());
+        chunkMap.addRecording(new Sound.MemorySound(rec1, new long[]{1, 2, 3}), rec1.toCharArray());
+        chunkMap.addRecording(new Sound.MemorySound(rec2, new long[]{4, 5, 6}), rec2.toCharArray());
 
         assertEquals(5, chunkMap.getNumChunks(),
                      "The number of chunks should be as expected");
@@ -48,7 +49,7 @@ class ChunkMap16Test {
 
         assertEquals(3, hits.size(),
                      "There should be the expected number of hits");
-        assertEquals(rec1, hits.get(0).getRecordingID(),
+        assertEquals(rec1, hits.get(0).getRecording().getID(),
                      "The top hit should be as expected");
     }
 }
