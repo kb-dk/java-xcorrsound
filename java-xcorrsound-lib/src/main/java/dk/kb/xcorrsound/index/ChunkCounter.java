@@ -70,14 +70,14 @@ public class ChunkCounter {
      * @param topX the number of chunks to locate.
      * @return topX matches in descending order.
      */
-    public List<Hit> getTopMatches(int topX) {
+    public List<SoundHit> getTopMatches(int topX) {
         long[] pairs = new long[counters.length];
         for (int chunkID = 0 ; chunkID < counters.length ; chunkID++) {
             pairs[chunkID] = (((long)counters[chunkID]) << 32) | chunkID;
         }
         Arrays.sort(pairs);
 
-        List<Hit> hits = new ArrayList<>(topX);
+        List<SoundHit> hits = new ArrayList<>(topX);
         for (int i = pairs.length-1 ; i >= 0 && i >= pairs.length-topX ; i--) {
             int chunkID = (int)(pairs[i] & 0xFFFF);
             int matches = (int)(pairs[i] >> 32);
@@ -88,7 +88,7 @@ public class ChunkCounter {
             int matchAreaStart = recordChunkID*chunkLength;
             int matchAreaEnd = matchAreaStart + chunkLength + chunkOverlap;
             // TODO: Extend with more info
-            hits.add(new Hit(recordings.get(chunkID), recordChunkID, matchAreaStart, matchAreaEnd, matches));
+            hits.add(new SoundHit(recordings.get(chunkID), recordChunkID, matchAreaStart, matchAreaEnd, matches));
         }
         return hits;
     }
@@ -104,109 +104,5 @@ public class ChunkCounter {
             --recordChunk;
         }
         return globalChunkID-recordChunk;
-    }
-
-    public static class Hit {
-        private final Sound recording;
-        private final int recordingChunkID;
-        private final int matches;
-        private final int matchAreaStartFingerprint; // Inclusive
-        private final int matchAreaEndFingerprint; // Exclusive
-        private final double matchAreaStartSeconds;
-        private double collapsedScore = 0.0; // Optional score
-        private double rawScore = 0.0; // Optional score
-
-        public Hit(Sound recording, int chunkID,
-                   int matchAreaStartFingerprint, int matchAreaEndFingerprint, int matches) {
-            this.recording = recording;
-            this.recordingChunkID = chunkID;
-            this.matches = matches;
-            this.matchAreaStartFingerprint = matchAreaStartFingerprint;
-            this.matchAreaEndFingerprint = matchAreaEndFingerprint;
-            this.matchAreaStartSeconds = matchAreaStartFingerprint * ChunkCounter.MS_PER_FINGERPRINT / 1000.0;
-        }
-
-        /**
-         * @return the recording where the match occurred.
-         */
-        public Sound getRecording() {
-            return recording;
-        }
-
-        /**
-         * @return the chunk in the recording that caused the match.
-         *         Chunks has length {@link ChunkMap16#getChunkLength()}.
-         *          Note that the matching area has size chunkLength + {@link ChunkMap16#getChunkOverlap()}.
-         * @see #getMatchAreaStartFingerprint()
-         * @see #getMatchAreaEndFingerprint()
-         */
-        public int getRecordingChunkID() {
-            return recordingChunkID;
-        }
-
-        /**
-         * @return the start of the range of fingerprints in the recording where the matched occurred. Inclusive.
-         */
-        public int getMatchAreaStartFingerprint() {
-            return matchAreaStartFingerprint;
-        }
-
-        /**
-         * @return the end of the range of fingerprints in the recording where the matched occurred. Exclusive.
-         */
-        public int getMatchAreaEndFingerprint() {
-            return matchAreaEndFingerprint;
-        }
-
-        public double getMatchAreaStartSeconds() {
-            return matchAreaStartSeconds;
-        }
-
-        public double getCollapsedScore() {
-            return collapsedScore;
-        }
-
-        public void setCollapsedScore(double collapsedScore) {
-            this.collapsedScore = collapsedScore;
-        }
-
-        public double getRawScore() {
-            return rawScore;
-        }
-
-        public void setRawScore(double rawScore) {
-            this.rawScore = rawScore;
-        }
-
-        private String getMatchAreaStartHumanTime() {
-            double seconds = matchAreaStartSeconds;
-            int hours = (int) (seconds / (60 * 60));
-            seconds -= hours * 60 * 60;
-            int minutes = (int) (seconds / 60);
-            seconds -= minutes * 60;
-            return String.format(Locale.ROOT, "%02d:%02d:%04.1f", hours, minutes, seconds);
-        }
-
-        /**
-         * @return the number of matching fingerprints for the chunk that this Hit represents.
-         */
-        public int getMatches() {
-            return matches;
-        }
-
-        @Override
-        public String toString() {
-            return "Hit{" +
-                   "recording='" + recording + '\'' +
-                   ", recordingChunkID=" + recordingChunkID +
-                   ", matchAreaStart=" + getMatchAreaStartHumanTime() +
-                   ", matchArea=" + matchAreaStartFingerprint +
-                   "->" + matchAreaEndFingerprint +
-                   ", matches=" + matches +
-                   ", score(c=" + String.format(Locale.ROOT, "%.2f", collapsedScore) +
-                   ", r=" + String.format(Locale.ROOT, "%.2f", rawScore) +
-                   '}';
-        }
-
     }
 }

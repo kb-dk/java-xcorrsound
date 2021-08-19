@@ -44,8 +44,8 @@ public class ChunkMap16 {
     private final int chunkOverlap;
 
     // Maps from fingerprint to chunks containing the fingerprint
-    private final ChunkIDs[] chunkIDMap = new ChunkIDs[65536]; // chunkIDs with fingerprint as index
-    private final List<Sound> recordings = new ArrayList<>();
+    final ChunkIDs[] chunkIDMap = new ChunkIDs[65536]; // chunkIDs with fingerprint as index
+    final List<Sound> recordings = new ArrayList<>();
 
     public ChunkMap16(int chunkLength, int chunkOverlap) {
         this(chunkLength, chunkOverlap, DEFAULT_INITIAL_CHUNK_COUNT);

@@ -24,7 +24,7 @@ import java.util.Locale;
  * These represent higher quality scores via exhaustive Hamming distance calculation.
  */
 public class SoundHit implements Comparable<SoundHit>{
-    private final String recordingID;
+    private final Sound recording;
     private final int recordingChunkID;
     private final int matches;
     private final int matchAreaStartFingerprint; // Inclusive
@@ -36,9 +36,9 @@ public class SoundHit implements Comparable<SoundHit>{
     private double rawScore = 0.0; // Optional score
     private int rawOffset = -1; // Optional offset for the highest score
 
-    public SoundHit(String recordingID, int chunkID,
+    public SoundHit(Sound recording, int chunkID,
                     int matchAreaStartFingerprint, int matchAreaEndFingerprint, int matches) {
-        this.recordingID = recordingID;
+        this.recording = recording;
         this.recordingChunkID = chunkID;
         this.matches = matches;
         this.matchAreaStartFingerprint = matchAreaStartFingerprint;
@@ -47,10 +47,10 @@ public class SoundHit implements Comparable<SoundHit>{
     }
 
     /**
-     * @return the recording ID, which should be the full file path.
+     * @return the recording.
      */
-    public String getRecordingID() {
-        return recordingID;
+    public Sound getRecording() {
+        return recording;
     }
 
     /**
@@ -158,8 +158,8 @@ public class SoundHit implements Comparable<SoundHit>{
 
     @Override
     public String toString() {
-        return "Hit{" +
-               "recordingID='" + recordingID + '\'' +
+        return "SoundHit{" +
+               "recording='" + recording + '\'' +
                ", score(c=" + toStringScoreMatch(collapsedOffset, collapsedScore) +
                ", r=" + toStringScoreMatch(rawOffset, rawScore) + ")" +
                ", matches=" + matches +
@@ -184,6 +184,6 @@ public class SoundHit implements Comparable<SoundHit>{
                     thenComparing(SoundHit::getCollapsedScore).reversed().
                     thenComparing(SoundHit::getMatches).reversed().
                     thenComparing(SoundHit::getRecordingChunkID).
-                    thenComparing(SoundHit::getRecordingID);
+                    thenComparing(hit -> hit.getRecording().getID());
 
 }
