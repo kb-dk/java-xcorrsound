@@ -14,6 +14,10 @@
  */
 package dk.kb.xcorrsound.index;
 
+import dk.kb.xcorrsound.Utils;
+import org.apache.commons.io.IOUtils;
+
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -215,7 +219,23 @@ public interface Sound {
          */
         @Override
         public long[] getRawPrints() {
-            throw new UnsupportedOperationException("Not implemented yet");
+            try (FileInputStream is = new FileInputStream(fingerprints.toFile())) {
+                long skipped = is.skip(offset*4L);
+                if (skipped != offset*4L) {
+                    throw new IllegalStateException(
+                            "Could only skip to " + skipped + " when attempting skip to offset " + offset + " for " +
+                            fingerprints + "' for '" + id + "'");
+                }
+                byte[] buffer = new byte[length*4];
+                IOUtils.readFully(is, buffer);
+                return PrintHandler.bytesToRawPrints(buffer);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException("Unable to find '" + fingerprints + "' for '" + id + "'");
+            } catch (IOException e) {
+                throw new RuntimeException("Unable to read " + length*4 + " bytes (" + length + " fingerprints " +
+                                           "from offset " + offset*4 + " (" + offset + " fingerprints) in '" +
+                                           fingerprints + "' for '" + id + "'");
+            }
         }
 
         /**

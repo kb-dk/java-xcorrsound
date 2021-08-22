@@ -3,6 +3,7 @@ package dk.kb.xcorrsound.index;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -317,17 +318,51 @@ class CollapsedDiscoveryTest {
                 .forEach(System.out::println);
     }
 
+    // Adds recordings with persistent fingerprints
+    void addRecordingsFingerprints(CollapsedDiscovery cd, String root, String[] instances)  {
+        Arrays.stream(instances)
+                .map(s -> root + s)
+                .map(Path::of)
+                .map(this::pathToPrintedSound)
+                .forEach(sound -> wrappedAdd(cd, sound));
+    }
+
+    // Adds recordings with on-demand generation of fingerprints
     void addRecordings(CollapsedDiscovery cd, String root, String[] instances)  {
         Arrays.stream(instances)
                 .map(s -> root + s)
-                .forEach(rec -> {
-                    try {
-                        cd.addRecording(rec);
-                    } catch (IOException e) {
-                        throw new RuntimeException("Could not add '" + rec + "'", e);
-                    }
-                });
+                .map(Path::of)
+                .map(this::pathToPathSound)
+                .forEach(rec -> wrappedAdd(cd, rec));
     }
+
+    void wrappedAdd(CollapsedDiscovery cd, Sound sound) {
+        try {
+            cd.addRecording(sound);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not add '" + sound + "'", e);
+        }
+    }
+    // Exception wrapper
+    Sound pathToPrintedSound(Path sound) {
+        Path prints = PH.getRawPrintsPath(sound);
+        try {
+            return new Sound.PrintedSound(sound.toString(), prints, 0, (int) Files.size(prints));
+        } catch (IOException e) {
+            throw new RuntimeException("Exception getting size of '" + prints + "'", e);
+        }
+    }
+    static final PrintHandler PH = new PrintHandler();
+    // Exception wrapper
+    Sound pathToPathSound(Path sound) {
+        try {
+            return new Sound.PathSound(sound);
+        } catch (IOException e) {
+            throw new RuntimeException("Exception creating PathSound for '" + sound + "'", e);
+        }
+    }
+
+
 
     String getResource(String resource) {
         return Thread.currentThread().getContextClassLoader().getResource(resource).getFile();

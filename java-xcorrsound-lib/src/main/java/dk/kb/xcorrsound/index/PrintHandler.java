@@ -89,6 +89,28 @@ public class PrintHandler {
     }
 
     /**
+     * Converts the given bytes to raw fingerprints, expecting the bytes to originate from the Ismir persistence
+     * format.
+     * @param bytes an array of bytes in Ismir format. Must be a multiple of 4.
+     * @return raw fingerprints, 32 bit significant.
+     */
+    public static long[] bytesToRawPrints(byte[] bytes) {
+        if ((bytes.length & 2) != 0) {
+            throw new IllegalArgumentException("Got " + bytes.length + " bytes, which is not a multiple of 4");
+        }
+        final long[] prints = new long[bytes.length/4];
+        for (int i = 0 ; i < prints.length ; i++) {
+            prints[i] = Integer.toUnsignedLong(Integer.reverseBytes(
+                    (bytes[i<<2]     << 24) +
+                    (bytes[(i<<2)+1] << 16) +
+                    (bytes[(i<<2)+2] << 8) +
+                    (bytes[(i<<2)+3])
+            ));
+        }
+        return prints;
+    }
+
+    /**
      * Generate fingerprints for the given soundFile. This method is non-caching and always perform a full generation.
      * @param soundFile a recording or snippet.
      * @return raw fingerprints for the sound.
