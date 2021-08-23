@@ -74,6 +74,7 @@ public class ScoreUtil {
         if (snipStart < 0) {
             throw new IllegalArgumentException("Illegal snippet area start: snipStart=" + snipStart);
         }
+        // TODO: Use recStart to fetch a smaller amount of raw fingerprints
         recEnd = Math.min(recEnd, recording.length);
         snipEnd = Math.min(snipEnd, snippet.length);
 
@@ -130,6 +131,7 @@ public class ScoreUtil {
         if (snipStart < 0) {
             throw new IllegalArgumentException("Illegal snippet area start: snipStart=" + snipStart);
         }
+        // TODO: Use recStart to fetch a smaller amount of raw fingerprints
         recEnd = Math.min(recEnd, recording.length);
         snipEnd = Math.min(snipEnd, snippet.length);
 
