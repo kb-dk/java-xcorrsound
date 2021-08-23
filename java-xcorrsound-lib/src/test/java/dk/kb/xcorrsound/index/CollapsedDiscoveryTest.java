@@ -1,6 +1,8 @@
 package dk.kb.xcorrsound.index;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
  *
  */
 class CollapsedDiscoveryTest {
+    static final Logger log = LoggerFactory.getLogger(CollapsedDiscoveryTest.class);
 
     final static String X_ROOT = "/home/te/projects/java-xcorrsound/samples/last_xmas/";
     //Files that has match using the slow search algorithm and all are correct
@@ -265,6 +268,10 @@ class CollapsedDiscoveryTest {
         //addRecordings(cd, B_ROOT, new String[]{"P3_0800_1000_970406_001.mp3"});
         addRecordings(cd, X_ROOT, X_MATCHING);
         addRecordings(cd, B_ROOT, B_MATCHING);
+        getMaps().stream() // All mapped sounds
+                .map(Sound::mapToSounds)
+                .flatMap(Collection::stream)
+                .forEach(soundPath -> wrappedAdd(cd, soundPath));
         addTime += System.currentTimeMillis();
 
         System.out.println("Record chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
@@ -277,7 +284,73 @@ class CollapsedDiscoveryTest {
         topChunked(cd, B_SOURCE, "barbie_girl", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
         searchTime += System.currentTimeMillis();
 
-        System.out.println("Initial add time: " + addTime/1000 + " seconds, search+refine time: " + searchTime/1000);
+        System.out.println("Initial add time: " + addTime/1000 + " seconds, search+refine time: " + searchTime/1000 + " seconds");
+    }
+
+    @Test
+    void mapFind() throws IOException {
+        final String SAMPLES = "/home/te/projects/java-xcorrsound/samples/";
+        //final Path MP3 = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118.mp3");
+        final Path WAV = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118.mp3");
+        final Path MAP = Path.of(SAMPLES + "index/tv2radio_2007-03-01.ismir.index.map");
+        final Path DIRECT_COPY = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_direct_clip.wav");
+        final Path BASSY_COPY = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_bassy.wav");
+
+        if (!Files.exists(WAV)) {
+           log.info("Test WAV " + WAV + " is not available. Skipping test");
+           return;
+        }
+        if (!Files.exists(MAP)) {
+           log.info("Test map " + MAP + " is not available. Skipping test");
+           return;
+        }
+        if (!Files.exists(DIRECT_COPY)) {
+           log.info("Direct copy clip " + DIRECT_COPY + " is not available. Skipping test");
+           return;
+        }
+        if (!Files.exists(BASSY_COPY)) {
+           log.info("Basse copy clip " + BASSY_COPY + " is not available. Skipping test");
+           return;
+        }
+        final int TOP_X = 100;
+        final int SHOW_RESULTS = 20;
+        final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
+        //  500 = very promising results, 42GB/year
+        // 5000 = might work, 4GB/year
+        final int R_CHUNK_LENGTH = 15000;
+        final int R_CHUNK_OVERLAP = 500;
+
+        final int S_CHUNK_LENGTH = 500;
+        final int S_CHUNK_OVERLAP = 0;
+
+        CollapsedDiscovery cd = new CollapsedDiscovery(R_CHUNK_LENGTH, R_CHUNK_OVERLAP, STRATEGY, true).
+                setCollapsedScorer(ScoreUtil::matchingBits16NonExhaustive).
+                setRawScorer(ScoreUtil::matchingBits32NonExhaustive);
+
+        long addTime = -System.currentTimeMillis();
+//        Sound.mapToSounds(MAP).forEach(soundPath -> wrappedAdd(cd, soundPath));
+        wrappedAdd(cd, new Sound.PathSound(WAV, true, cd.printHandler));
+        addTime += System.currentTimeMillis();
+
+        System.out.println("Record chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
+        System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
+        System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
+
+        long searchTime = -System.currentTimeMillis();
+        topChunked(cd, DIRECT_COPY.toString(), "b27", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, BASSY_COPY.toString(), "b27", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        searchTime += System.currentTimeMillis();
+
+        System.out.println("Initial add time: " + addTime/1000 + " seconds, search+refine time: " + searchTime/1000 + " seconds");
+    }
+
+    private List<Path> getMaps() {
+        String MAP_GLOB = "/home/te/projects/java-xcorrsound/samples/index/*.map";
+        List<Path> maps = dk.kb.util.Resolver.resolveGlob(MAP_GLOB);
+        if (maps.isEmpty()) {
+            log.info("Cannot locate any map files for testing at " + MAP_GLOB);
+        }
+        return maps;
     }
 
     private void topChunked(CollapsedDiscovery cd, String snippet, String goal, int topX, int maxResults,
@@ -374,7 +447,8 @@ class CollapsedDiscoveryTest {
 
 
     String getResource(String resource) {
-        return Thread.currentThread().getContextClassLoader().getResource(resource).getFile();
+        return Files.exists(Path.of(resource)) ? resource :
+                Thread.currentThread().getContextClassLoader().getResource(resource).getFile();
     }
 
 

@@ -51,7 +51,11 @@
            <version>30.0-jre</version>
          </dependency>
 
-
+        <dependency>
+           <groupId>dk.kb.util</groupId>
+           <artifactId>kb-util</artifactId>
+           <version>1.4.1</version>
+         </dependency>
 
         <!--Tests-->
         <dependency>
