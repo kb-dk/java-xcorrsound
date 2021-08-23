@@ -128,7 +128,7 @@ public interface Sound {
             if (mapEntry.isBlank() || mapEntry.trim().startsWith("#")) {
                 continue;
             }
-            String[] tokens = mapEntry.split(" *", 2);
+            String[] tokens = mapEntry.split(" +", 2);
             if (tokens.length != 2) {
                 throw new IllegalStateException(
                         "Map entry '" + mapEntry + "' from map '" + mapPath + "' could not be split in two");
@@ -137,6 +137,7 @@ public interface Sound {
                 int origo = Integer.parseInt(tokens[0]);
                 String sound = tokens[1];
                 sounds.add(new Sound.PrintedSound(sound, fingerprints, oldOrigo, origo-oldOrigo));
+                oldOrigo = origo;
             } catch (Exception e) {
                 throw new IllegalStateException(
                         "Map entry '" + mapEntry + "' from map '" + mapPath +
