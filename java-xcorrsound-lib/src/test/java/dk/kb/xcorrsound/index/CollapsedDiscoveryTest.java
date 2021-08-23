@@ -257,18 +257,27 @@ class CollapsedDiscoveryTest {
                 setCollapsedScorer(ScoreUtil::matchingBits16NonExhaustive).
                 setRawScorer(ScoreUtil::matchingBits32NonExhaustive);
 
+        long addTime = -System.currentTimeMillis();
         //addRecordings(cd, X_ROOT, new String[]{"P3_1000_1200_901211_001.mp3"});
         addRecordings(cd, R_ROOT, R_RECORDINGS);
+        // When using printed, we are missing
+        //SoundHit{recording='PathSound(path='last_xmas/P3_1400_1600_891224_001.mp3')', score(c=[0.77, 01:41:21.1], r=[0.61, 01:41:21.1]), matches=460, recordingChunk=34, matchArea=01:38:46.2 [510000->525500]}
         //addRecordings(cd, B_ROOT, new String[]{"P3_0800_1000_970406_001.mp3"});
         addRecordings(cd, X_ROOT, X_MATCHING);
         addRecordings(cd, B_ROOT, B_MATCHING);
+        addTime += System.currentTimeMillis();
 
         System.out.println("Record chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
         System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
+
+        long searchTime = -System.currentTimeMillis();
         topChunked(cd, X_SOURCE_HQ, "last_xmas", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
         topChunked(cd, X_SOURCE_LQ, "last_xmas",TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
         topChunked(cd, B_SOURCE, "barbie_girl", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        searchTime += System.currentTimeMillis();
+
+        System.out.println("Initial add time: " + addTime/1000 + " seconds, search+refine time: " + searchTime/1000);
     }
 
     private void topChunked(CollapsedDiscovery cd, String snippet, String goal, int topX, int maxResults,
@@ -347,7 +356,7 @@ class CollapsedDiscoveryTest {
     Sound pathToPrintedSound(Path sound) {
         Path prints = PH.getRawPrintsPath(sound);
         try {
-            return new Sound.PrintedSound(sound.toString(), prints, 0, (int) Files.size(prints));
+            return new Sound.PrintedSound(sound.toString(), prints, 0, (int) Files.size(prints)/4);
         } catch (IOException e) {
             throw new RuntimeException("Exception getting size of '" + prints + "'", e);
         }
