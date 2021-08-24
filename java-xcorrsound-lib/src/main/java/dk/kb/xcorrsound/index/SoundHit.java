@@ -85,6 +85,13 @@ public class SoundHit implements Comparable<SoundHit>{
         return matchAreaStartSeconds;
     }
 
+    /**
+     * @return matches / maxPossibleMatches.
+     */
+    public double getMatchFraction() {
+        return 1.0 * matches / maxPossibleMatches;
+    }
+
     public double getCollapsedScore() {
         return collapsedScore;
     }

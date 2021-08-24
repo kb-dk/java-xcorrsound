@@ -236,18 +236,22 @@ public class CollapsedDiscovery {
             int snipEnd = Math.min(snipStart + chunkLength + chunkOverlap, snipCollapsed.length-postSkip);
             List<SoundHit> hits = chunkMap.countMatches(snipCollapsed, snipStart, snipEnd).getTopMatches(topX);
             for (SoundHit hit: hits) {
-                long[] recRaw = hit.getRecording().getRawPrints(); // TODO: Utilize hit.getMatchAreaStartFingerprint()
+                long[] recRaw = hit.getRecording().getRawPrints(
+                        hit.getMatchAreaStartFingerprint(),
+                        hit.getMatchAreaEndFingerprint()-hit.getMatchAreaStartFingerprint());
+                ScoreUtil.Match rMatch = rawScorer.score(
+                        snipRaw, snipStart, snipEnd,
+                        recRaw, 0, recRaw.length);
+                hit.setRawScore(rMatch.score);
+                hit.setRawOffset(hit.getMatchAreaStartFingerprint()+rMatch.offset);
+
                 char[] recCollapsed = collapsor.getCollapsed((recRaw));
                 ScoreUtil.Match cMatch = collapsedScorer.score(
-                        snipCollapsed, snipStart, snipEnd, recCollapsed,
-                        hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
+                        snipCollapsed, snipStart, snipEnd,
+                        recCollapsed,0, recCollapsed.length);
                 hit.setCollapsedScore(cMatch.score);
-                hit.setCollapsedOffset(cMatch.offset);
-                ScoreUtil.Match rMatch = rawScorer.score(
-                        snipRaw, snipStart, snipEnd, recRaw,
-                        hit.getMatchAreaStartFingerprint(), hit.getMatchAreaEndFingerprint());
-                hit.setRawScore(rMatch.score);
-                hit.setRawOffset(rMatch.offset);
+                hit.setCollapsedOffset(hit.getMatchAreaStartFingerprint()+cMatch.offset);
+
             }
             chunkResults.add(hits);
         }

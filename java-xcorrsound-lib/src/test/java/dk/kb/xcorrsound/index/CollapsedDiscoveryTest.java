@@ -250,7 +250,7 @@ class CollapsedDiscoveryTest {
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
-        final int R_CHUNK_LENGTH = 15000;
+        final int R_CHUNK_LENGTH = 5000;
         final int R_CHUNK_OVERLAP = 500;
 
         final int S_CHUNK_LENGTH = 500;
@@ -274,7 +274,10 @@ class CollapsedDiscoveryTest {
                 .forEach(soundPath -> wrappedAdd(cd, soundPath));
         addTime += System.currentTimeMillis();
 
-        System.out.println("Record chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
+        double oneYearMB = 86.0*60*60*24*365/R_CHUNK_LENGTH* 65536 / 8 / 1024 / 1024;
+        System.out.printf(
+                Locale.ROOT, "Record chunk length %d, 1 year ~= %.0fMB, 150 years ~= %.1fGB%n",
+                R_CHUNK_LENGTH, oneYearMB, oneYearMB*150/1024);
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
         System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
 
@@ -291,7 +294,7 @@ class CollapsedDiscoveryTest {
     void mapFind() throws IOException {
         final String SAMPLES = "/home/te/projects/java-xcorrsound/samples/";
         //final Path MP3 = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118.mp3");
-        final Path WAV = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118.mp3");
+        final Path WAV = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118.wav");
         final Path MAP = Path.of(SAMPLES + "index/tv2radio_2007-03-01.ismir.index.map");
         final Path DIRECT_COPY = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_direct_clip.wav");
         final Path BASSY_COPY = Path.of(SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_bassy.wav");
@@ -317,7 +320,7 @@ class CollapsedDiscoveryTest {
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
-        final int R_CHUNK_LENGTH = 15000;
+        final int R_CHUNK_LENGTH = 2000;
         final int R_CHUNK_OVERLAP = 500;
 
         final int S_CHUNK_LENGTH = 500;
@@ -332,7 +335,10 @@ class CollapsedDiscoveryTest {
         wrappedAdd(cd, new Sound.PathSound(WAV, true, cd.printHandler));
         addTime += System.currentTimeMillis();
 
-        System.out.println("Record chunk length " + R_CHUNK_LENGTH + ", 1 year ~= " + (86L*60*60*24*365/R_CHUNK_LENGTH* 8/1024) + "MB");
+        double oneYearMB = 86.0*60*60*24*365/R_CHUNK_LENGTH* 65536 / 8 / 1024 / 1024;
+        System.out.printf(
+                Locale.ROOT, "Record chunk length %d, 1 year ~= %.0fMB, 150 years ~= %.1fGB%n",
+                R_CHUNK_LENGTH, oneYearMB, oneYearMB*150/1024);
         System.out.println("Total chunks in ChunkMap16: " + cd.chunkMap.getNumChunks());
         System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
 
@@ -379,7 +385,8 @@ class CollapsedDiscoveryTest {
         // De-duplicate, reduce and sort by score
         final Set<String> seenRecordings = new HashSet<>();
         hits = hits.stream()
-                .sorted()
+                //.sorted()  // Natural order = score based
+                .sorted(Comparator.comparing(SoundHit::getMatchFraction).reversed())
                 .filter(hit -> seenRecordings.add(hit.getRecording().getID()))
                 .limit(maxResults)
                 .collect(Collectors.toList());

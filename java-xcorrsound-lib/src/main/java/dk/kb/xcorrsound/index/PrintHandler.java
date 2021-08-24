@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -62,6 +63,40 @@ public class PrintHandler {
     }
 
     /**
+     * Processes the given file using {@link XCorrSoundFacade#generateFingerPrintFromSoundFile} and returns the result.
+     *
+     * The generated fingerprints are cached for subsequent calls.
+     * @param recording a sound file.
+     * @param offset offset into the fingerprints (1 fingerprint = 4 bytes).
+     * @param length the number of fingerprints to return (1 fingerprint = 4 bytes).
+     * @param cachePrints if true, generated prints are persistently cached as a sidecar file.
+     * @return fingerprints for the recording.
+     * @throws IOException if the file could not be loaded or processed.
+     */
+    public long[] getRawPrints(final Path recording, int offset, int length, boolean cachePrints) throws IOException {
+        if (!Files.exists(recording)) {
+            throw new FileNotFoundException("The file '" + recording + "' does not exist");
+        }
+
+        final Path printsFile = getRawPrintsPath(recording);
+        if (Files.exists(printsFile)) {
+            return loadRawPrints(printsFile, offset, length);
+        }
+
+        long[] raw = generatePrints(recording);
+
+        if (cachePrints) {
+            storeRawPrints(raw, printsFile);
+        }
+        if (offset == 0 && length == raw.length) {
+            return raw;
+        }
+        long[] subset = new long[length];
+        System.arraycopy(raw, offset, subset, 0, length);
+        return subset;
+    }
+
+    /**
      * Load raw fingerprints (32 bit/fingerprint) fully from the given printsFile.
      * @param printsFile a file containing fingerprints with 32 significant bits/print.
      * @return all the fingerprints in the file.
@@ -71,22 +106,37 @@ public class PrintHandler {
         if (!Files.isReadable(printsFile)) {
             throw new IOException("Unable to read '" + printsFile + "'");
         }
+        int numPrints = (int) (Files.size(printsFile) / 4); // 32 bits/fingerprint
+        return loadRawPrints(printsFile, 0, numPrints);
+    }
 
-        try {
-            int numPrints = (int) (Files.size(printsFile) / 4); // 32 bits/fingerprint
-            long[] fingerprints = new long[numPrints];
-            log.debug("Loading {} fingerprints from '{}'", numPrints, printsFile);
-            try (DataInputStream of = new DataInputStream(IOUtils.buffer(
-                    FileUtils.openInputStream(printsFile.toFile())))) {
-                for (int i = 0; i < numPrints; i++) {
-                    fingerprints[i] = Integer.toUnsignedLong(Integer.reverseBytes(of.readInt()));
-                }
+    /**
+     * Load a subset of the raw fingerprints (32 bit/fingerprint) from the given printsFile.
+     * @param printsFile a file containing fingerprints with 32 significant bits/print.
+     * @param offset offset into the fingerprints (1 fingerprint = 4 bytes).
+     * @param length the number of fingerprints to return (1 fingerprint = 4 bytes).
+     * @return a subset of the fingerprints in the file.
+     */
+    public long[] loadRawPrints(Path printsFile, int offset, int length) {
+        try (FileInputStream is = new FileInputStream(printsFile.toFile())) {
+            long skipped = is.skip(offset*4L);
+            if (skipped != offset*4L) {
+                throw new IllegalStateException(
+                        "Could only skip to " + skipped + " when attempting skip to offset " + offset + " for " +
+                        printsFile + "'");
             }
-            return fingerprints;
-        } catch (Exception e) {
-            throw new IOException("Failed loading fingerprints from '" + printsFile + "'", e);
+            byte[] buffer = new byte[length*4];
+            IOUtils.readFully(is, buffer);
+            return PrintHandler.bytesToRawPrints(buffer);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Unable to find '" + printsFile + "'");
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to read " + length*4 + " bytes (" + length + " fingerprints " +
+                                       "from offset " + offset*4 + " (" + offset + " fingerprints) in '" +
+                                       printsFile + "'");
         }
     }
+
 
     /**
      * Converts the given bytes to raw fingerprints, expecting the bytes to originate from the Ismir persistence
