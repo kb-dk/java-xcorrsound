@@ -106,7 +106,8 @@ public class ChunkCounter {
             int matchAreaStart = recordChunkID*chunkLength;
             int matchAreaEnd = matchAreaStart + chunkLength + chunkOverlap;
             // TODO: Extend with more info
-            hits.add(new SoundHit(recordings.get(chunkID), recordChunkID, matchAreaStart, matchAreaEnd, matches));
+            hits.add(new SoundHit(recordings.get(chunkID), recordChunkID,
+                                  matchAreaStart, matchAreaEnd, matches, maxPossibleMatches));
         }
         return hits;
     }
