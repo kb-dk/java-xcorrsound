@@ -56,6 +56,7 @@ public class SoundHit implements Comparable<SoundHit>{
         this.maxPossibleMatches = maxPossibleMatches;
         this.matchAreaStartFingerprint = matchAreaStartFingerprint;
         this.matchAreaEndFingerprint = matchAreaEndFingerprint;
+        // TODO: Not good enough as the fingerprints file might contain multiple sounds. Need origo for the recording
         this.matchAreaStartSeconds = offsetToSeconds(matchAreaStartFingerprint);
     }
 
