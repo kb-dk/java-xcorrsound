@@ -36,6 +36,8 @@ public class ChunkCounter {
     private final int chunkLength;
     private final int chunkOverlap;
 
+    private int maxPossibleMatches = -1;
+
     public ChunkCounter(int numChunks, List<Sound> recordings, int chunkLength, int chunkOverlap) {
         this.numChunks = numChunks;
         this.counters = new int[numChunks];
@@ -62,6 +64,22 @@ public class ChunkCounter {
         if (delta != 0) {
             chunks.stream().forEach(chunkID -> counters[chunkID] += delta);
         }
+    }
+
+    /**
+     * The maximum possible matches is the number of fingerprints in the snippet that is matched from.
+     * @return the maximum number of matches.
+     */
+    public int getMaxPossibleMatches() {
+        return maxPossibleMatches;
+    }
+
+    /**
+     * The maximum possible matches is the number of fingerprints in the snippet that is matched from.
+     * @return the maximum number of fingerprint matches.
+     */
+    public void setMaxPossibleMatches(int maxPossibleMatches) {
+        this.maxPossibleMatches = maxPossibleMatches;
     }
 
     /**

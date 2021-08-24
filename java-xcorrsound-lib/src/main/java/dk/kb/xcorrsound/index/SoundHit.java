@@ -27,6 +27,7 @@ public class SoundHit implements Comparable<SoundHit>{
     private final Sound recording;
     private final int recordingChunkID;
     private final int matches;
+    private final int maxPossibleMatches;
     private final int matchAreaStartFingerprint; // Inclusive
     private final int matchAreaEndFingerprint; // Exclusive
     private final double matchAreaStartSeconds;
@@ -37,10 +38,12 @@ public class SoundHit implements Comparable<SoundHit>{
     private int rawOffset = -1; // Optional offset for the highest score
 
     public SoundHit(Sound recording, int chunkID,
-                    int matchAreaStartFingerprint, int matchAreaEndFingerprint, int matches) {
+                    int matchAreaStartFingerprint, int matchAreaEndFingerprint,
+                    int matches, int maxPossibleMatches) {
         this.recording = recording;
         this.recordingChunkID = chunkID;
         this.matches = matches;
+        this.maxPossibleMatches = maxPossibleMatches;
         this.matchAreaStartFingerprint = matchAreaStartFingerprint;
         this.matchAreaEndFingerprint = matchAreaEndFingerprint;
         this.matchAreaStartSeconds = offsetToSeconds(matchAreaStartFingerprint);
@@ -162,7 +165,7 @@ public class SoundHit implements Comparable<SoundHit>{
                "recording='" + recording + '\'' +
                ", score(c=" + toStringScoreMatch(collapsedOffset, collapsedScore) +
                ", r=" + toStringScoreMatch(rawOffset, rawScore) + ")" +
-               ", matches=" + matches +
+               ", matches=" + matches + "/" + maxPossibleMatches +
                ", recordingChunk=" + recordingChunkID +
                ", matchArea=" + getMatchAreaStartHumanTime() +
                " [" + matchAreaStartFingerprint + "->" + matchAreaEndFingerprint + "]" +
