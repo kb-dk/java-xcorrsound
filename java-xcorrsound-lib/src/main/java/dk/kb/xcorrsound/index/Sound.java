@@ -14,12 +14,10 @@
  */
 package dk.kb.xcorrsound.index;
 
-import dk.kb.xcorrsound.Utils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -32,7 +30,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
-import java.util.stream.LongStream;
 
 /**
  * Representation of a recording or general sound snippet with optional path to raw fingerprints.
@@ -83,9 +80,9 @@ public interface Sound {
      * @param mapPaths paths to map-files, e.g. {@code mysounds.map}.
      * @return Sounds with previously generated fingerprints.
      */
-    static List<Sound> loadSoundMap(List<Path> mapPaths) {
+    static List<Sound> loadSoundMaps(List<Path> mapPaths) {
         return mapPaths.stream()
-                .map(Sound::mapToSounds)
+                .map(Sound::loadSoundMap)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
     }
@@ -97,7 +94,7 @@ public interface Sound {
      * @param mapPath path to map-files, e.g. {@code mysounds.map}.
      * @return Sounds with previously generated fingerprints.
      */
-    static List<Sound> mapToSounds(Path mapPath) {
+    static List<Sound> loadSoundMap(Path mapPath) {
         if (!mapPath.toString().endsWith(".map")) {
             throw new IllegalArgumentException("Map file does not end with .map: '" + mapPath + "'");
         }

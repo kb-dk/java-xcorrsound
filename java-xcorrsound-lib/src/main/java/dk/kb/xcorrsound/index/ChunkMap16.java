@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Holds 16 bit fingerprints for files, providing access as overlapping chunks.
+ * Conceptually holds 16 bit fingerprints for files, providing match counting in overlapping chunks.
  *
  * A given recording is added as an array of 16 bit integers (chars) of arbitrary (max 2 billion) length.
  * Internally the recording is seen as chunks of length {@link #chunkLength}, with chunk-IDs being assigned sequentially
@@ -85,6 +85,8 @@ public class ChunkMap16 {
     /**
      * Search all chunks for the given fingerprints and count the number of times any chunk has been matched with any
      * fingerprint.
+
+     * Note: This method does not support subsequent fine counting.
      * @param fingerprints fingerprints for a snippet.
      * @return a counter for all chunk matches.
      */
@@ -95,6 +97,8 @@ public class ChunkMap16 {
     /**
      * Search all chunks for a subset of the given fingerprints and count the number of times any chunk has been
      * matched with any fingerprint from the subset.
+     *
+     * Note: This method does not support subsequent fine counting.
      * @param fingerprints fingerprints for a snippet.
      * @param areaStart the start of the area of fingerprints to search. Inclusive.
      * @param areaEnd the end of the area of fingerprints to search. Exclusive.
@@ -102,7 +106,29 @@ public class ChunkMap16 {
      * @return a counter for all chunk matches.
      */
     public ChunkCounter countMatches(char[] fingerprints, int areaStart, int areaEnd) {
-        ChunkCounter counter = new ChunkCounter(getNumChunks(), recordings, chunkLength, chunkOverlap);
+        return countMatches(null, 0, -1, -1, fingerprints, areaStart, areaEnd);
+    }
+
+    /**
+     * Search all chunks for a subset of the given fingerprints and count the number of times any chunk has been
+     * matched with any fingerprint from the subset.
+     *
+     * This method supports subsequent fine counting.
+     * @param snippet the source of the collapsed fingerprints. Used for fine counting.
+     * @param snippetChunkID the logical chunk into the snippet.
+     * @param snippetOffset the offset, measured in fingerprints, into the snippet fingerprints. Used for fine counting.
+     * @param snippetLength the number of snippet fingerprints used for counting. Used for fine counting.
+     * @param fingerprints fingerprints for a snippet.
+     * @param areaStart the start of the area of fingerprints to search. Inclusive. This is normally = snippetOffset.
+     * @param areaEnd the end of the area of fingerprints to search. Exclusive. This is normally = snippetOffset + snippetLength.
+     *                If areaEnd larger than the number of fingerprints, it is set to the number of fingerprints.
+     * @return a counter for all chunk matches.
+     */
+    public ChunkCounter countMatches(Sound snippet, int snippetChunkID, int snippetOffset, int snippetLength,
+                                     char[] fingerprints, int areaStart, int areaEnd) {
+        ChunkCounter counter = new ChunkCounter(
+                snippet, snippetChunkID, snippetLength, snippetOffset,
+                getNumChunks(), recordings, chunkLength, chunkOverlap);
         areaEnd = Math.min(areaEnd, fingerprints.length);
         counter.setMaxPossibleMatches(areaEnd-areaStart);
         // Pseudo code

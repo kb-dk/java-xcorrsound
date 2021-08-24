@@ -24,6 +24,10 @@ import java.util.Locale;
  * These represent higher quality scores via exhaustive Hamming distance calculation.
  */
 public class SoundHit implements Comparable<SoundHit>{
+    private final Sound snippet;
+    private final int snippetChunkID;
+    private final int snippetOffset;
+    private final int snippetLength;
     private final Sound recording;
     private final int recordingChunkID;
     private final int matches;
@@ -32,21 +36,55 @@ public class SoundHit implements Comparable<SoundHit>{
     private final int matchAreaEndFingerprint; // Exclusive
     private final double matchAreaStartSeconds;
 
+    // Optional post-assigned info below
     private double collapsedScore = 0.0; // Optional score
     private int collapsedOffset = -1; // Optional offset for the highest score
     private double rawScore = 0.0; // Optional score
     private int rawOffset = -1; // Optional offset for the highest score
 
-    public SoundHit(Sound recording, int chunkID,
+    public SoundHit(Sound snippet, int snippetChunkID, int snippetOffset, int snippetLength,
+                    Sound recording, int recordingChunkID,
                     int matchAreaStartFingerprint, int matchAreaEndFingerprint,
                     int matches, int maxPossibleMatches) {
+        this.snippet = snippet;
+        this.snippetChunkID = snippetChunkID;
+        this.snippetOffset = snippetOffset;
+        this.snippetLength = snippetLength;
         this.recording = recording;
-        this.recordingChunkID = chunkID;
+        this.recordingChunkID = recordingChunkID;
         this.matches = matches;
         this.maxPossibleMatches = maxPossibleMatches;
         this.matchAreaStartFingerprint = matchAreaStartFingerprint;
         this.matchAreaEndFingerprint = matchAreaEndFingerprint;
         this.matchAreaStartSeconds = offsetToSeconds(matchAreaStartFingerprint);
+    }
+
+    /**
+     * @return the snippet used for matching.
+     */
+    public Sound getSnippet() {
+        return snippet;
+    }
+
+    /**
+     * @return the logical chunkID in the snippet.
+     */
+    public int getSnippetChunkID() {
+        return snippetChunkID;
+    }
+
+    /**
+     * @return the offset into the snippet where match counting started.
+     */
+    public int getSnippetOffset() {
+        return snippetOffset;
+    }
+
+    /**
+     * @return the number of fingerprints in the snippet used for matching.
+     */
+    public int getSnippetLength() {
+        return snippetLength;
     }
 
     /**
@@ -176,6 +214,8 @@ public class SoundHit implements Comparable<SoundHit>{
                ", recordingChunk=" + recordingChunkID +
                ", matchArea=" + getMatchAreaStartHumanTime() +
                " [" + matchAreaStartFingerprint + "->" + matchAreaEndFingerprint + "]" +
+               ", snippet=(" + snippet + ", chunk=" + snippetChunkID +
+               ", offset=" + snippetOffset + ", length=" + snippetLength + ")" +
                '}';
     }
 

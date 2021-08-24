@@ -35,7 +35,7 @@ class SoundTest {
             return;
         }
         int ENTRIES = 381;
-        List<Sound> sounds = Sound.loadSoundMap(List.of(Path.of(MAP)));
+        List<Sound> sounds = Sound.loadSoundMaps(List.of(Path.of(MAP)));
         assertEquals(ENTRIES, sounds.size(), "There should be the expected number of map entries");
         System.out.println(sounds);
     }
@@ -48,7 +48,7 @@ class SoundTest {
             log.info("Cannot run unit test testGlobMap as no map files are available at " + MAP_GLOB);
             return;
         }
-        List<Sound> sounds = Sound.loadSoundMap(maps);
+        List<Sound> sounds = Sound.loadSoundMaps(maps);
         assertFalse(sounds.isEmpty(), "There should be at least one sound");
     }
 }

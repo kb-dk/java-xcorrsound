@@ -36,9 +36,24 @@ public class ChunkCounter {
     private final int chunkLength;
     private final int chunkOverlap;
 
+    // Snippet info needed for later fine counting of hits
+    private Sound snippet;
+    private int snippetChunkID;
+    private int snippetOffset;
+    private int snippetLength;
+
     private int maxPossibleMatches = -1;
 
     public ChunkCounter(int numChunks, List<Sound> recordings, int chunkLength, int chunkOverlap) {
+        this(null, 0, -1, -1, numChunks, recordings, chunkLength, chunkOverlap);
+    }
+    public ChunkCounter(Sound snippet, int snippetChunkID, int snippetOffset, int snippetLength,
+                        int numChunks, List<Sound> recordings, int chunkLength, int chunkOverlap) {
+        this.snippet = snippet;
+        this.snippetChunkID = snippetChunkID;
+        this.snippetOffset = snippetOffset;
+        this.snippetLength = snippetLength;
+
         this.numChunks = numChunks;
         this.counters = new int[numChunks];
         this.recordings = recordings;
@@ -106,8 +121,10 @@ public class ChunkCounter {
             int matchAreaStart = recordChunkID*chunkLength;
             int matchAreaEnd = matchAreaStart + chunkLength + chunkOverlap;
             // TODO: Extend with more info
-            hits.add(new SoundHit(recordings.get(chunkID), recordChunkID,
-                                  matchAreaStart, matchAreaEnd, matches, maxPossibleMatches));
+            hits.add(new SoundHit(
+                    snippet, snippetChunkID, snippetOffset, snippetLength,
+                    recordings.get(chunkID), recordChunkID,
+                    matchAreaStart, matchAreaEnd, matches, maxPossibleMatches));
         }
         return hits;
     }

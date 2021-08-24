@@ -15,16 +15,11 @@
 package dk.kb.xcorrsound.index;
 
 import dk.kb.facade.XCorrSoundFacade;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -198,30 +193,33 @@ public class CollapsedDiscovery {
     }
 
     /**
-     * Uses the index structure for fast lookup for candidates. It is recommended to make a second pass of the returned
-     * hits using Hamming distance or similar higher quality similarity calculation.
+     * Uses the index structure for fast lookup for candidates.
+     *
+     * It is recommended to make a second pass of the returned hits using Hamming distance or similar higher quality
+     * similarity calculation. The method {@link #fineCountHamming(SoundHit)} is the standard refinement method.
      *
      * The input snippet is fingerprinted and the fingerprints divided into chunks before searching.
-     * @param snippetPath the path to a sound snippet.
+     * @param snippetPath path to a sound snippet.
      *                    This should not result in more fingerprints than the chunkLength in {@link ChunkMap16}.
-     * @param topX the number of hits to return.
      * @param preSkip the number of fingerprint to skip at the start of the fingerprints from the snipper. Inclusive.
      * @param postSkip the number of fingerprint to skip at the end of the fingerprints from the snipper. Exclusive.
-     * @param chunkLength the chunk length for
+     * @param chunkOverlap the overlap between snippet chunks.
+     * @param chunkLength the chunk length for splitting the snippet fingerprints.
+     * @param topX the number of hits to return. A high number has nearly the same performance impact as a low one.
      * @return the closes matches in descending order for each chunk of snippet fingerprints, starting from chunk 0.
      * @throws IOException if it was not possible to generate fingerprints from snippetPath.
      */
     public List<List<SoundHit>> findCandidates(
-            String snippetPath, int topX, int preSkip, int postSkip, int chunkLength, int chunkOverlap)
+            String snippetPath, int preSkip, int postSkip, int chunkOverlap, int chunkLength, int topX)
             throws IOException {
 
         Sound snippet = new Sound.PathSound(Path.of(snippetPath), cachefingerprints, printHandler);
         long[] snipRaw = snippet.getRawPrints();
         char[] snipCollapsed = collapsor.getCollapsed((snipRaw));
 
-        if (preSkip + postSkip >= snipCollapsed.length) {
+        if (preSkip + postSkip >= snipRaw.length) {
             log.warn("preSkip={} + postSkip={} >= numSnippets={}. Empty result list returned",
-                     preSkip, postSkip, snipCollapsed.length);
+                     preSkip, postSkip, snipRaw.length);
             return Collections.emptyList();
         }
 
@@ -234,33 +232,52 @@ public class CollapsedDiscovery {
         for (int chunk = 0 ; chunk < numChunks ; chunk++) {
             int snipStart = preSkip + chunk*chunkLength;
             int snipEnd = Math.min(snipStart + chunkLength + chunkOverlap, snipCollapsed.length-postSkip);
-            List<SoundHit> hits = chunkMap.countMatches(snipCollapsed, snipStart, snipEnd).getTopMatches(topX);
-            for (SoundHit hit: hits) {
-                long[] recRaw = hit.getRecording().getRawPrints(
-                        hit.getMatchAreaStartFingerprint(),
-                        hit.getMatchAreaEndFingerprint()-hit.getMatchAreaStartFingerprint());
-                ScoreUtil.Match rMatch = rawScorer.score(
-                        snipRaw, snipStart, snipEnd,
-                        recRaw, 0, recRaw.length);
-                hit.setRawScore(rMatch.score);
-                hit.setRawOffset(hit.getMatchAreaStartFingerprint()+rMatch.offset);
-
-                char[] recCollapsed = collapsor.getCollapsed((recRaw));
-                ScoreUtil.Match cMatch = collapsedScorer.score(
-                        snipCollapsed, snipStart, snipEnd,
-                        recCollapsed,0, recCollapsed.length);
-                hit.setCollapsedScore(cMatch.score);
-                hit.setCollapsedOffset(hit.getMatchAreaStartFingerprint()+cMatch.offset);
-
-            }
-            chunkResults.add(hits);
+            chunkResults.add(chunkMap.countMatches(snippet, chunk, snipStart, snipEnd-snipStart,
+                                                   snipCollapsed, snipStart, snipEnd).getTopMatches(topX));
         }
         return chunkResults;
-/*        if (collapsed.length > chunkMap.getChunkOverlap()) {
-            log.warn("Attempting search for snippet with {} fingerprints with a setup where the overlap between " +
-                     "chunks is only {} fingerprints. This increases the probability of false negatives",
-                     collapsed.length, chunkMap.getChunkOverlap());
-        }*/
     }
 
+    /**
+     * Perform fine counting (hamming distance) of the hit.
+     * This involves fetching the raw fingerprints for the hit-snippet as well as relevant recording chunks.
+     *
+     * After calling this, the result can be accessed from {@link SoundHit#getRawScore()} and
+     * {@link SoundHit#getCollapsedScore()}.
+     * @param hit a hit, normally delivered from {@link #findCandidates(String, int)}.
+     * @return the input hit, extended with extra scoring information from fine counting.
+     * @throws IOException if the underlying fingerprints for the snippet or recording could not be fetched.
+     */
+    public SoundHit fineCountHamming(SoundHit hit) {
+        if (hit.getSnippet() == null) {
+            throw new IllegalStateException("Unable to fine count hit as no snippet is assigned: " + hit);
+        }
+
+        // TODO: Having two scores raw vs. collapsed is essentially double work. Remove the lowest performing one
+
+        long[] snipRaw;
+        long[] recRaw;
+        try {
+            snipRaw = hit.getSnippet().getRawPrints();
+            recRaw = hit.getRecording().getRawPrints(
+                    hit.getMatchAreaStartFingerprint(),
+                    hit.getMatchAreaEndFingerprint()-hit.getMatchAreaStartFingerprint());
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to get raw fingerprints for " + hit, e);
+        }
+        ScoreUtil.Match rMatch = getRawScorer().score(
+                snipRaw, hit.getSnippetOffset(), hit.getSnippetOffset()+hit.getSnippetLength(),
+                recRaw, 0, recRaw.length);
+        hit.setRawScore(rMatch.score);
+        hit.setRawOffset(hit.getMatchAreaStartFingerprint()+rMatch.offset);
+
+        char[] snipCollapsed = collapsor.getCollapsed((snipRaw));
+        char[] recCollapsed = collapsor.getCollapsed((recRaw));
+        ScoreUtil.Match cMatch = getCollapsedScorer().score(
+                snipCollapsed, hit.getSnippetOffset(), hit.getSnippetOffset()+hit.getSnippetLength(),
+                recCollapsed,0, recCollapsed.length);
+        hit.setCollapsedScore(cMatch.score);
+        hit.setCollapsedOffset(hit.getMatchAreaStartFingerprint()+cMatch.offset);
+        return hit;
+    }
 }

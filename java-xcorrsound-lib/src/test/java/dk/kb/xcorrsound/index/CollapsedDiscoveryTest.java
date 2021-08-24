@@ -239,18 +239,21 @@ class CollapsedDiscoveryTest {
 
     private void top(CollapsedDiscovery cd, String snippet, int topX) throws IOException {
         List<SoundHit> hqHits = cd.findCandidates(getResource(snippet), topX);
+        hqHits.forEach(cd::fineCountHamming);
         System.out.println("*** Hits for " + snippet);
         hqHits.forEach(System.out::println);
     }
 
     @Test
     void chunkedFind() throws IOException {
-        final int TOP_X = 100;
-        final int SHOW_RESULTS = 20;
+        final int CANDIDATES = 1000;
+        final int FINE = 100;
+        final int DISPLAY = 20;
+
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
-        final int R_CHUNK_LENGTH = 5000;
+        final int R_CHUNK_LENGTH = 500;
         final int R_CHUNK_OVERLAP = 500;
 
         final int S_CHUNK_LENGTH = 500;
@@ -269,7 +272,7 @@ class CollapsedDiscoveryTest {
         addRecordings(cd, X_ROOT, X_MATCHING);
         addRecordings(cd, B_ROOT, B_MATCHING);
         getMaps().stream() // All mapped sounds
-                .map(Sound::mapToSounds)
+                .map(Sound::loadSoundMap)
                 .flatMap(Collection::stream)
                 .forEach(soundPath -> wrappedAdd(cd, soundPath));
         addTime += System.currentTimeMillis();
@@ -282,9 +285,9 @@ class CollapsedDiscoveryTest {
         System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
 
         long searchTime = -System.currentTimeMillis();
-        topChunked(cd, X_SOURCE_HQ, "last_xmas", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
-        topChunked(cd, X_SOURCE_LQ, "last_xmas",TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
-        topChunked(cd, B_SOURCE, "barbie_girl", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, X_SOURCE_HQ, "last_xmas", CANDIDATES, FINE, DISPLAY, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, X_SOURCE_LQ, "last_xmas", CANDIDATES, FINE, DISPLAY, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, B_SOURCE, "barbie_girl", CANDIDATES, FINE, DISPLAY, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
         searchTime += System.currentTimeMillis();
 
         System.out.println("Initial add time: " + addTime/1000 + " seconds, search+refine time: " + searchTime/1000 + " seconds");
@@ -312,11 +315,12 @@ class CollapsedDiscoveryTest {
            return;
         }
         if (!Files.exists(BASSY_COPY)) {
-           log.info("Basse copy clip " + BASSY_COPY + " is not available. Skipping test");
+           log.info("Bassy copy clip " + BASSY_COPY + " is not available. Skipping test");
            return;
         }
-        final int TOP_X = 100;
-        final int SHOW_RESULTS = 20;
+        final int CANDIDATES = 1000;
+        final int FINE = 100;
+        final int DISPLAY = 20;
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
@@ -343,8 +347,8 @@ class CollapsedDiscoveryTest {
         System.out.println("Snippet chunk length " + S_CHUNK_LENGTH + " ~= " + S_CHUNK_LENGTH/86 + " seconds");
 
         long searchTime = -System.currentTimeMillis();
-        topChunked(cd, DIRECT_COPY.toString(), "b27", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
-        topChunked(cd, BASSY_COPY.toString(), "b27", TOP_X, SHOW_RESULTS, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, DIRECT_COPY.toString(), "b27", CANDIDATES, FINE, DISPLAY, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
+        topChunked(cd, BASSY_COPY.toString(), "b27", CANDIDATES, FINE, DISPLAY, S_CHUNK_LENGTH, S_CHUNK_OVERLAP);
         searchTime += System.currentTimeMillis();
 
         System.out.println("Initial add time: " + addTime/1000 + " seconds, search+refine time: " + searchTime/1000 + " seconds");
@@ -359,13 +363,19 @@ class CollapsedDiscoveryTest {
         return maps;
     }
 
-    private void topChunked(CollapsedDiscovery cd, String snippet, String goal, int topX, int maxResults,
+    /**
+     * @param candidateCount the number of candidate hits to get from {@link CollapsedDiscovery#findCandidates}.
+     * @param fineCount the number of hits to fine count using {@link CollapsedDiscovery#fineCountHamming}.
+     * @param displayCount the number of hits to display.
+     */
+    private void topChunked(CollapsedDiscovery cd, String snippet, String goal,
+                            int candidateCount, int fineCount, int displayCount,
                             int sChunkLength, int sChunkOverlap) throws IOException {
         final int PRE_SKIP = 50;
         final int POST_SKIP = 50;
 
         List<List<SoundHit>> chunkHits =
-                cd.findCandidates(getResource(snippet), topX, PRE_SKIP, POST_SKIP, sChunkLength, sChunkOverlap);
+                cd.findCandidates(getResource(snippet), PRE_SKIP, POST_SKIP, sChunkOverlap, sChunkLength, candidateCount);
         long[] snippetPrints = new PrintHandler().getRawPrints(Path.of(getResource(snippet)), true);
         System.out.println("\n*** Hits for " + snippet + " with " + snippetPrints.length + " prints " +
                            "(" + snippetPrints.length*ChunkCounter.MS_PER_FINGERPRINT/1000 + " seconds)");
@@ -373,7 +383,7 @@ class CollapsedDiscoveryTest {
         List<SoundHit> flattened = chunkHits.stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
-        dumpHits(cd, flattened, maxResults, goal);
+        dumpHits(cd, flattened, fineCount, displayCount, goal);
         /*
         for (List<SoundHit> hits : chunkHits) {
             dumpHits(cd, hits, maxResults, goal);
@@ -381,14 +391,17 @@ class CollapsedDiscoveryTest {
          */
     }
 
-    private void dumpHits(CollapsedDiscovery cd, List<SoundHit> hits, int maxResults, String goal) {
+    private void dumpHits(CollapsedDiscovery cd, List<SoundHit> hits,
+                          int fineCount, int displayCount, String goal) {
         // De-duplicate, reduce and sort by score
         final Set<String> seenRecordings = new HashSet<>();
         hits = hits.stream()
-                //.sorted()  // Natural order = score based
                 .sorted(Comparator.comparing(SoundHit::getMatchFraction).reversed())
+                .limit(fineCount)
+                .map(cd::fineCountHamming)
                 .filter(hit -> seenRecordings.add(hit.getRecording().getID()))
-                .limit(maxResults)
+                .sorted()  // Natural order = score based
+                .limit(displayCount)
                 .collect(Collectors.toList());
 
         // Find the ideal number of collections to match
@@ -400,7 +413,7 @@ class CollapsedDiscoveryTest {
                 count();
 
         System.out.println("\nhits (goal '" + goal + "' " + passed + "/" + goalCount +
-                           "): Sorted by natural order, duplicate recordings removed");
+                           "): Sorted by natural order, duplicates removed");
         hits.stream()
                 .map(Object::toString)
                 .map(str -> str.replace("/home/te/projects/java-xcorrsound/samples/", ""))
