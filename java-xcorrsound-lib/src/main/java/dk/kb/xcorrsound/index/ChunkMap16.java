@@ -126,8 +126,11 @@ public class ChunkMap16 {
      */
     public ChunkCounter countMatches(Sound snippet, int snippetChunkID, int snippetOffset, int snippetLength,
                                      char[] fingerprints, int areaStart, int areaEnd) {
+        if (snippetLength == 0) {
+            throw new IllegalArgumentException("Cannot count matches without content: snippetLength==" + snippetLength);
+        }
         ChunkCounter counter = new ChunkCounter(
-                snippet, snippetChunkID, snippetLength, snippetOffset,
+                snippet, snippetChunkID, snippetOffset, snippetLength,
                 getNumChunks(), recordings, chunkLength, chunkOverlap);
         areaEnd = Math.min(areaEnd, fingerprints.length);
         counter.setMaxPossibleMatches(areaEnd-areaStart);
