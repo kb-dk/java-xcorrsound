@@ -253,7 +253,7 @@ class CollapsedDiscoveryTest {
         final Collapsor.COLLAPSE_STRATEGY STRATEGY = Collapsor.COLLAPSE_STRATEGY.or_pairs_16;
         //  500 = very promising results, 42GB/year
         // 5000 = might work, 4GB/year
-        final int R_CHUNK_LENGTH = 500;
+        final int R_CHUNK_LENGTH = 1000;
         final int R_CHUNK_OVERLAP = 500;
 
         final int S_CHUNK_LENGTH = 500;
@@ -335,7 +335,7 @@ class CollapsedDiscoveryTest {
                 setRawScorer(ScoreUtil::matchingBits32NonExhaustive);
 
         long addTime = -System.currentTimeMillis();
-//        Sound.mapToSounds(MAP).forEach(soundPath -> wrappedAdd(cd, soundPath));
+        //Sound.loadSoundMap(MAP).forEach(soundPath -> wrappedAdd(cd, soundPath));
         wrappedAdd(cd, new Sound.PathSound(WAV, true, cd.printHandler));
         addTime += System.currentTimeMillis();
 
