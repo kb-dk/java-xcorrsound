@@ -55,6 +55,10 @@ public class ScoreUtil {
                 throw new IllegalArgumentException("offset=" + offset + " but should be positive");
             }
         }
+        @Override
+        public String toString() {
+            return "Match(offset=" + offset + ", score=" + score + ")";
+        }
     }
 
     /**
