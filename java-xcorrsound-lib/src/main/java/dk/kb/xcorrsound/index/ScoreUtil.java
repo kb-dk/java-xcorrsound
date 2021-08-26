@@ -51,6 +51,9 @@ public class ScoreUtil {
         public Match(int offset, double score) {
             this.offset = offset;
             this.score = score;
+            if (offset < 0) {
+                throw new IllegalArgumentException("offset=" + offset + " but should be positive");
+            }
         }
     }
 
@@ -130,6 +133,9 @@ public class ScoreUtil {
             boolean exhaustive) {
         if (snipStart < 0) {
             throw new IllegalArgumentException("Illegal snippet area start: snipStart=" + snipStart);
+        }
+        if (snipStart == snipEnd) {
+            throw new IllegalArgumentException("Empry area defined: snipStart==" + snipStart + ", snipEnd==" + snipEnd);
         }
         // TODO: Use recStart to fetch a smaller amount of raw fingerprints
         recEnd = Math.min(recEnd, recording.length);

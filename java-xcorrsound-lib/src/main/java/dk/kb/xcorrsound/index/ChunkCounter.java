@@ -53,6 +53,9 @@ public class ChunkCounter {
         this.snippetChunkID = snippetChunkID;
         this.snippetOffset = snippetOffset;
         this.snippetLength = snippetLength;
+        if (snippetLength == 0) {
+            throw new IllegalArgumentException("No snippet content: snippetLength==" + snippetLength);
+        }
 
         this.numChunks = numChunks;
         this.counters = new int[numChunks];
