@@ -15,6 +15,7 @@
 package dk.kb.xcorrsound.index;
 
 import dk.kb.facade.XCorrSoundFacade;
+import dk.kb.xcorrsound.search.FingerprintDBSearcher;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
