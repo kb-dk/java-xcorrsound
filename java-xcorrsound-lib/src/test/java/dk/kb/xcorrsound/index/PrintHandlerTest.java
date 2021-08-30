@@ -4,6 +4,7 @@ import dk.kb.facade.XCorrSoundFacade;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,5 +38,21 @@ class PrintHandlerTest {
         long[] hPrints = new PrintHandler().generatePrints(Path.of(soundFile));
         System.out.println("PrintHandler delivered " + hPrints.length + " prints for " + soundFile);
         assertEquals(xPrints.length, hPrints.length, "Both print generators should deliver the same amount of prints");
+    }
+
+    @Test
+    void testSubPrintOffset() {
+        PrintHandler ph = new PrintHandler();
+        String soundFile = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3").getFile();
+        long[] basePrints = ph.generatePrints(Path.of(soundFile), 0);
+
+        for (int sub = 0 ; sub < 64 ; sub++) {
+            long[] subPrints = ph.generatePrints(Path.of(soundFile), sub);
+            if (!Arrays.equals(basePrints, subPrints)) {
+                System.out.println("sampleOffset=" + sub + " differs from base sampleOffset=0");
+                //TestHelper.dumpDiff(basePrints, 0, subPrints.length, subPrints, 0);
+            }
+        }
+
     }
 }

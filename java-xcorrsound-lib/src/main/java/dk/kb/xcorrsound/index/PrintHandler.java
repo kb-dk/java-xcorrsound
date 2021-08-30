@@ -15,13 +15,11 @@
 package dk.kb.xcorrsound.index;
 
 import dk.kb.facade.XCorrSoundFacade;
-import dk.kb.xcorrsound.search.FingerprintDBSearcher;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -163,15 +161,30 @@ public class PrintHandler {
 
     /**
      * Generate fingerprints for the given soundFile. This method is non-caching and always perform a full generation.
+     * This method is an alias for {@code generatePrints(soundFile, 0)}.
      * @param soundFile a recording or snippet.
      * @return raw fingerprints for the sound.
      */
     public long[] generatePrints(Path soundFile) {
+        return generatePrints(soundFile, 0);
+    }
+
+    /**
+     * Generate fingerprints for the given soundFile. This method is non-caching and always perform a full generation.
+     *
+     * One fingerprint is generated for each 64 samples on 5512Hz inputs. Adjusting sampleOffset makes it possible to
+     * fine tune the fingerprints. In reality the difference between fingerprints for different offsets is small, but
+     * it can be relevant when doing precision matching.
+     * @param soundFile a recording or snippet.
+     * @param sampleOffset how far into the sample the fingerprinting should start.
+     * @return raw fingerprints for the sound.
+     */
+    public long[] generatePrints(Path soundFile, int sampleOffset) {
         long startTime = System.currentTimeMillis();
         log.info("Analysing '{}'", soundFile);
         long[] raw;
         try {
-            raw = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundFile.toString());
+            raw = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundFile.toString(), sampleOffset);
         } catch (Exception e) {
             throw new RuntimeException("Failed generating fingerprint for '" + soundFile + "'", e);
         }
