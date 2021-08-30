@@ -39,6 +39,24 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     }
     
     public long[] getFingerprintsForFile(String filename)
+            throws UnsupportedAudioFileException, IOException, InterruptedException {
+        return getFingerprintsForFile(filename, 0);
+    }
+
+    /**
+     * Generate fingerprints for the given filename.
+     *
+     * One fingerprint is generated for each 64 samples on 5512Hz inputs. Adjusting sampleOffset makes it possible to
+     * fine tune the fingerprints. In reality the difference between fingerprints for different offsets is small, but
+     * it can be relevant when doing precision matching.
+     * @param filename the file name for a MP3 file or a 5512Hz WAV file.
+     * @param sampleOffset starting offset for fingerprinting i samples. Values 0-63 makes sense.
+     * @return fingerprints for the sound file.
+     * @throws IOException if the file could not be read.
+     * @throws UnsupportedAudioFileException if the audio could not be decoded.
+     * @throws InterruptedException if the external call to {@code ffmpeg} was interrupted.
+     */
+    public long[] getFingerprintsForFile(String filename, int sampleOffset)
             throws IOException, UnsupportedAudioFileException, InterruptedException {
         
         // if filename is not wav file, start by converting to 5512hz stereo wav file
@@ -75,7 +93,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         //}
         //
         
-        long[] fingerprintStream = generateFingerprintStream(samples, frameLength, sampleRate, advance);
+        long[] fingerprintStream = generateFingerprintStream(samples, sampleOffset, frameLength, sampleRate, advance);
         return fingerprintStream;
     }
     
@@ -172,8 +190,8 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         return res;
     }
     
-    protected static long[] generateFingerprintStream(short[] input, int frameLength, int sampleRate, int advance) {
-        log.debug("Generating fingerprint for input of length {}", input.length);
+    protected static long[] generateFingerprintStream(short[] input, int sampleOffset, int frameLength, int sampleRate, int advance) {
+        log.debug("Generating fingerprint for input of length {} with offset {}", input.length, sampleOffset);
         double[] hanningWindow = getHanningWindow(frameLength);
         int[] logScale = getLogScale(2000, frameLength, sampleRate);
         
@@ -182,8 +200,8 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         double[] prevEnergy = new double[logScale.length];
         
         int frameEnd = frameLength;
-        for (int frameStart = 0;
-             frameEnd < input.length;
+        for (int frameStart = sampleOffset;
+             frameEnd < input.length-sampleOffset;
              frameStart += advance, frameEnd += advance) {
             
             double[] tmp = new double[frameLength];

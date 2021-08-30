@@ -51,12 +51,36 @@ public class XCorrSoundFacade {
         
         
     
+    /**
+     * Generate fingerprints for the given soundFile. This method is non-caching and always perform a full generation.
+     *
+     * One fingerprint is generated for each 64 samples on 5512Hz inputs.
+     * This method is a wrapper for {@code generateFingerPrintFromSoundFile(fileName, 0}
+     * @param fileName a recording or snippet.
+     * @return raw fingerprints for the sound.
+     */
     public static long[] generateFingerPrintFromSoundFile(String fileName) throws Exception{
         FingerprintStrategyIsmir fpGenerator = new FingerprintStrategyIsmir();                
          long[] fp =  fpGenerator.getFingerprintsForFile(fileName);        
          return fp;
     }
      
+    /**
+     * Generate fingerprints for the given soundFile. This method is non-caching and always perform a full generation.
+     *
+     * One fingerprint is generated for each 64 samples on 5512Hz inputs. Adjusting sampleOffset makes it possible to
+     * fine tune the fingerprints. In reality the difference between fingerprints for different offsets is small, but
+     * it can be relevant when doing precision matching.
+     * @param fileName a recording or snippet.
+     * @param sampleOffset how far into the sample the fingerprinting should start.
+     * @return raw fingerprints for the sound.
+     */
+    public static long[] generateFingerPrintFromSoundFile(String fileName, int sampleOffset) throws Exception{
+        FingerprintStrategyIsmir fpGenerator = new FingerprintStrategyIsmir();
+         long[] fp =  fpGenerator.getFingerprintsForFile(fileName, sampleOffset);
+         return fp;
+    }
+
     /*
      * Probably move impl to a util class
      * Not sure this will be used except by unittest since fingerprints are concatenated
