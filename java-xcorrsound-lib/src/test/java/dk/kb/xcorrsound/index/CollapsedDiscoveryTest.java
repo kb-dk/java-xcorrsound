@@ -447,7 +447,7 @@ class CollapsedDiscoveryTest {
     }
     // Exception wrapper
     Sound pathToPrintedSound(Path sound) {
-        Path prints = PH.getRawPrintsPath(sound);
+        Path prints = PH.getRawPrintsPath(sound, 0);
         try {
             return new Sound.PrintedSound(sound.toString(), prints, 0, (int) Files.size(prints)/4);
         } catch (IOException e) {
