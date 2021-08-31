@@ -155,7 +155,7 @@ class ScoreUtilTest {
     void testLocateSampleOffset() throws IOException {
         final String SAMPLES = "/home/te/projects/java-xcorrsound/samples/";
         final int SNIP_START = 0;
-        final int SNIP_END = 30000;
+        final int SNIP_END = 500;
 
         PrintHandler ph = new PrintHandler();
 
