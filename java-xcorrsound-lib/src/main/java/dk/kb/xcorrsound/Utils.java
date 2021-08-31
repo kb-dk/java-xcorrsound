@@ -9,7 +9,8 @@ public class Utils {
         }
         return result;
     }
-    
+
+    // TODO: check that this works for negative values, e.g. byte2 = -128
     public static int bytesToIntsLittleEndian(byte byte1, byte byte2, byte byte3, byte byte4){
         int integer = ((byte1 << 24) + (byte2 << 16) + (byte3 << 8) + (byte4 << 0));
         return integer;
