@@ -61,9 +61,10 @@ public interface Sound {
                     "offset " + offset + " is larger than the number of raw fingerprints " + raw.length);
         }
         if (offset + length > raw.length) {
-            throw new ArrayIndexOutOfBoundsException(
-                    "offset " + offset + " + length " + length + " is larger than the number of raw fingerprints " +
+            log.warn("Unexpected internal boundary breach. Adjusting to max: " +
+                     "offset " + offset + " + length " + length + " is larger than the number of raw fingerprints " +
                     raw.length);
+            length = raw.length-offset;
         }
         if (offset == 0 && length == raw.length) {
             return raw;
