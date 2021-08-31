@@ -7,6 +7,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /*
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,31 +65,90 @@ class ScoreUtilTest {
 
     @Test
     void testPreciseMatch() throws IOException {
-        final int SNIP_START = 0;
-        final int SNIP_END = 50;
+        final int SNIP_START = 50; // Must be at least 1
+        final int SNIP_END = 200;
 
         PrintHandler printHandler = new PrintHandler();
         final String SAMPLES = "/home/te/projects/java-xcorrsound/samples/";
 
-        String exactSnippet = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_bassy.wav";
-        if (!Files.exists(Path.of(exactSnippet))) {
-            log.info("Unable to run test as test files are not available: " + SAMPLES);
+        String perfectSnippet = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_direct_clip_perfect_offset.wav";
+        if (!Files.exists(Path.of(perfectSnippet))) {
+            log.info("Unable to run test as sample files are not available: " + perfectSnippet);
         }
-        long[] exactRaw = printHandler.getRawPrints(Path.of(exactSnippet), true);
+        long[] perfectRaw = printHandler.getRawPrints(Path.of(perfectSnippet), true);
 
-        String bassySnippet = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_direct_clip.wav";
+        String recording = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118.wav";
+        long[] recordingRaw = printHandler.getRawPrints(Path.of(recording), true);
+
+        ScoreUtil.Match perfectMatch = ScoreUtil.findBestMatchLong(
+                perfectRaw, SNIP_START, SNIP_END, recordingRaw, 0, recordingRaw.length, 32, false);
+        assertTrue(perfectMatch.score > 0.9999,
+                   "Perfect snippet should score ~1 but was " + perfectMatch);
+        log.info("Perfect: " + perfectMatch);
+        //TestHelper.dumpDiff(bassyRaw, SNIP_START, SNIP_END, recordingRaw, bassy.offset);
+    }
+
+    @Test
+    void testImpreciseMatch() throws IOException {
+        final int SNIP_START = 50;
+        final int SNIP_END = 200;
+
+        PrintHandler printHandler = new PrintHandler();
+        final String SAMPLES = "/home/te/projects/java-xcorrsound/samples/";
+
+        String bassySnippet = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_bassy.wav";
+        if (!Files.exists(Path.of(bassySnippet))) {
+            log.info("Unable to run test as test files are not available: " + bassySnippet);
+        }
         long[] bassyRaw = printHandler.getRawPrints(Path.of(bassySnippet), true);
 
         String recording = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118.wav";
         long[] recordingRaw = printHandler.getRawPrints(Path.of(recording), true);
 
+        ScoreUtil.Match bassyMatch = ScoreUtil.findBestMatchLong(
+                bassyRaw, SNIP_START, SNIP_END, recordingRaw, 0, recordingRaw.length, 32, false);
+        assertTrue(bassyMatch.score < 0.9999,
+                   "Imprecise snippet should score < 1 but was " + bassyMatch);
+        assertTrue(bassyMatch.score > 0.9,
+                   "Imprecise snippet should score > 0.9, as it is not THAT imprecise, but was " + bassyMatch);
+        log.info("Bassy: " + bassyMatch);
+        //TestHelper.dumpDiff(bassyRaw, SNIP_START, SNIP_END, recordingRaw, bassy.offset);
+    }
 
-        ScoreUtil.Match exact = ScoreUtil.findBestMatchLong(exactRaw, SNIP_START, SNIP_END, recordingRaw, 0, recordingRaw.length, 32, false);
-        System.out.println("Exact: " + exact);
-        TestHelper.dumpDiff(exactRaw, SNIP_START, SNIP_END, recordingRaw, exact.offset);
+    @Test
+    void testRawScore() {
+        final int RECORD_PRINTS = 10000;
+        final int RECORD_SEARCH_OFFSET = 200;
+        final int SNIPPET_OFFSET = 600;
+        final int SNIPPET_PRINTS = 100;
 
-        ScoreUtil.Match bassy = ScoreUtil.findBestMatchLong(bassyRaw, SNIP_START, SNIP_END, recordingRaw, 0, recordingRaw.length, 32, false);
-        System.out.println("Bassy: " + bassy);
+        Random r = new Random(87); // Fixed seed = deterministic
+        long[] record = new long[RECORD_PRINTS];
+        for (int i = 0 ; i < RECORD_PRINTS ; i++) {
+            record[i] = r.nextInt();
+        }
+
+        long[] perfectSnippet = new long[SNIPPET_PRINTS];
+        System.arraycopy(record, SNIPPET_OFFSET, perfectSnippet, 0, SNIPPET_PRINTS);
+
+        long[] twoOffSnippet = new long[SNIPPET_PRINTS];
+        System.arraycopy(record, SNIPPET_OFFSET, twoOffSnippet, 0, SNIPPET_PRINTS);
+        twoOffSnippet[SNIPPET_PRINTS/2]++;
+        twoOffSnippet[SNIPPET_PRINTS/3]++;
+
+        ScoreUtil.Match perfectMatch = ScoreUtil.matchingBits32NonExhaustive(
+                perfectSnippet, 0, SNIPPET_PRINTS, record, RECORD_SEARCH_OFFSET, RECORD_PRINTS);
+        assertTrue(perfectMatch.score > 0.9999,
+                   "The perfect match should be perfect but was " + perfectMatch);
+        assertEquals(perfectMatch.offset, SNIPPET_OFFSET,
+                     "The perfect match should have the expected offset");
+
+        ScoreUtil.Match twoOffMatch = ScoreUtil.matchingBits32NonExhaustive(
+                twoOffSnippet, 0, SNIPPET_PRINTS, record, RECORD_SEARCH_OFFSET, RECORD_PRINTS);
+        assertFalse(twoOffMatch.score > 0.9999,
+                   "The two fingerprints off match should not be perfect but was " + perfectMatch);
+        assertEquals(twoOffMatch.offset, SNIPPET_OFFSET, // Yes, same as perfect. It is just a small change
+                     "The two fingerprints off match should have the expected offset");
     }
 
     @Test
@@ -103,7 +165,7 @@ class ScoreUtilTest {
         }
         final long[] recordingRaw = ph.getRawPrints(Path.of(recording), true);
            // 2021-08-30 16:35:16 [main] INFO  d.k.x.search.FingerprintDBSearcher(FingerprintDBSearcher.java:97) - Found hit at 103640 with dist 0
-        String exactSnippet = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_direct_clip.wav";
+        String exactSnippet = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_direct_clip_perfect_offset.wav";
         ScoreUtil.Match best = new ScoreUtil.Match(0, 0);
         ScoreUtil.Match worst = new ScoreUtil.Match(0, 2);
         int bestSampleOffset = 0;
