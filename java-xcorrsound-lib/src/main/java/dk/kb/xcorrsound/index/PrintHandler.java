@@ -43,22 +43,7 @@ public class PrintHandler {
      * @throws IOException if the file could not be loaded or processed.
      */
     public long[] getRawPrints(final Path recording, boolean cachePrints) throws IOException {
-        if (!Files.exists(recording)) {
-            throw new FileNotFoundException("The file '" + recording + "' does not exist");
-        }
-
-        final Path printsFile = getRawPrintsPath(recording);
-        if (Files.exists(printsFile)) {
-            return loadRawPrints(printsFile);
-        }
-
-        long[] raw = generatePrints(recording);
-
-        if (cachePrints) {
-            storeRawPrints(raw, printsFile);
-        }
-
-        return raw;
+        return getRawPrints(recording, 0, -1, cachePrints);
     }
 
     /**
@@ -67,7 +52,7 @@ public class PrintHandler {
      * The generated fingerprints are cached for subsequent calls.
      * @param recording a sound file.
      * @param offset offset into the fingerprints (1 fingerprint = 4 bytes).
-     * @param length the number of fingerprints to return (1 fingerprint = 4 bytes).
+     * @param length the number of fingerprints to return (1 fingerprint = 4 bytes). -1 means all possible prints.
      * @param cachePrints if true, generated prints are persistently cached as a sidecar file.
      * @return fingerprints for the recording.
      * @throws IOException if the file could not be loaded or processed.
@@ -83,15 +68,16 @@ public class PrintHandler {
         }
 
         long[] raw = generatePrints(recording);
+        final int trueLength = length == -1 ? raw.length-offset : length;
 
         if (cachePrints) {
             storeRawPrints(raw, printsFile);
         }
-        if (offset == 0 && length == raw.length) {
+        if (offset == 0 && trueLength == raw.length) {
             return raw;
         }
         long[] subset = new long[length];
-        System.arraycopy(raw, offset, subset, 0, length);
+        System.arraycopy(raw, offset, subset, 0, trueLength);
         return subset;
     }
 
@@ -113,10 +99,17 @@ public class PrintHandler {
      * Load a subset of the raw fingerprints (32 bit/fingerprint) from the given printsFile.
      * @param printsFile a file containing fingerprints with 32 significant bits/print.
      * @param offset offset into the fingerprints (1 fingerprint = 4 bytes).
-     * @param length the number of fingerprints to return (1 fingerprint = 4 bytes).
+     * @param length the number of fingerprints to return (1 fingerprint = 4 bytes). -1 means all possible prints.
      * @return a subset of the fingerprints in the file.
      */
     public long[] loadRawPrints(Path printsFile, int offset, int length) {
+        if (length == -1) {
+            try {
+                length = ((int)Files.size(printsFile))*4-offset;
+            } catch (IOException e) {
+                throw new RuntimeException("Unable to determine size of '" + printsFile + "'", e);
+            }
+        }
         try (FileInputStream is = new FileInputStream(printsFile.toFile())) {
             long skipped = is.skip(offset*4L);
             if (skipped != offset*4L) {
