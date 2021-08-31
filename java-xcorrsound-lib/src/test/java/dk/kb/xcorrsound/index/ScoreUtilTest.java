@@ -93,7 +93,7 @@ class ScoreUtilTest {
     void testLocateSampleOffset() throws IOException {
         final String SAMPLES = "/home/te/projects/java-xcorrsound/samples/";
         final int SNIP_START = 0;
-        final int SNIP_END = 50;
+        final int SNIP_END = 30000;
 
         PrintHandler ph = new PrintHandler();
 
@@ -101,16 +101,30 @@ class ScoreUtilTest {
         if (!Files.exists(Path.of(recording))) {
             log.info("Unable to run test as test files are not available: " + recording);
         }
-        long[] recordingRaw = ph.getRawPrints(Path.of(recording), true);
-
-        String exactSnippet = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_bassy.wav";
-        for (int sub = 0 ; sub < 64 ; sub++) {
-            long[] exactRaw = ph.generatePrints(Path.of(exactSnippet), sub);
+        final long[] recordingRaw = ph.getRawPrints(Path.of(recording), true);
+           // 2021-08-30 16:35:16 [main] INFO  d.k.x.search.FingerprintDBSearcher(FingerprintDBSearcher.java:97) - Found hit at 103640 with dist 0
+        String exactSnippet = SAMPLES + "b27401cb-d635-4b7f-bcf9-bf93389e2118_direct_clip.wav";
+        ScoreUtil.Match best = new ScoreUtil.Match(0, 0);
+        ScoreUtil.Match worst = new ScoreUtil.Match(0, 2);
+        int bestSampleOffset = 0;
+        int worstSampleOffset = 0;
+        for (int sampleOffset = 0 ; sampleOffset < 64 ; sampleOffset++) {
+            long[] exactRaw = ph.generatePrints(Path.of(exactSnippet), sampleOffset);
 
             ScoreUtil.Match exact = ScoreUtil.findBestMatchLong(exactRaw, SNIP_START, SNIP_END, recordingRaw, 0, recordingRaw.length, 32, false);
             System.out.println("Exact: " + exact);
+            if (worst.score > exact.score) {
+                worst = exact;
+                worstSampleOffset = sampleOffset;
+            }
+            if (best.score < exact.score) {
+                best = exact;
+                bestSampleOffset = sampleOffset;
+            }
 //            TestHelper.dumpDiff(exactRaw, SNIP_START, SNIP_END, recordingRaw, exact.offset);
         }
+        System.out.println("Worst match: " + worst + " (sampleOffset=" + worstSampleOffset + ")");
+        System.out.println("Best match:  " + best + " (sampleOffset=" + bestSampleOffset + ")");
     }
 
 
