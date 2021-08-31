@@ -27,6 +27,9 @@ import java.util.Locale;
 public class TestHelper {
     private static final Logger log = LoggerFactory.getLogger(TestHelper.class);
 
+    public static void dumpDiff(long[] snippetRaw, long[] recordingRaw) {
+        dumpDiff(snippetRaw, 0, snippetRaw.length, recordingRaw, 0);
+    }
     public static void dumpDiff(long[] snippetRaw, int snipStart, int snipEnd, long[] recordingRaw, int recordingStart) {
         int diffs = 0;
         int diffBits = 0;
