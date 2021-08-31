@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 /**
  * Generates and provides fingerprints for sound files.
@@ -43,7 +44,7 @@ public class PrintHandler {
      * @throws IOException if the file could not be loaded or processed.
      */
     public long[] getRawPrints(final Path recording, boolean cachePrints) throws IOException {
-        return getRawPrints(recording, 0, -1, cachePrints);
+        return getRawPrints(recording, 0, 0, -1, cachePrints);
     }
 
     /**
@@ -51,28 +52,32 @@ public class PrintHandler {
      *
      * The generated fingerprints are cached for subsequent calls.
      * @param recording a sound file.
+     * @param sampleOffset the offset in samples for micro-adjustment of the fingerprint generation.
+     *                     Sane values are 0 to 63 as a single fingerprint is based on 64 samples.
      * @param offset offset into the fingerprints (1 fingerprint = 4 bytes).
      * @param length the number of fingerprints to return (1 fingerprint = 4 bytes). -1 means all possible prints.
      * @param cachePrints if true, generated prints are persistently cached as a sidecar file.
      * @return fingerprints for the recording.
      * @throws IOException if the file could not be loaded or processed.
      */
-    public long[] getRawPrints(final Path recording, int offset, int length, boolean cachePrints) throws IOException {
+    public long[] getRawPrints(
+            final Path recording, int sampleOffset, int offset, int length, boolean cachePrints) throws IOException {
         if (!Files.exists(recording)) {
             throw new FileNotFoundException("The file '" + recording + "' does not exist");
         }
 
-        final Path printsFile = getRawPrintsPath(recording);
+        final Path printsFile = getRawPrintsPath(recording, sampleOffset);
         if (Files.exists(printsFile)) {
             return loadRawPrints(printsFile, offset, length);
         }
 
-        long[] raw = generatePrints(recording);
+        long[] raw = generatePrints(recording, sampleOffset);
         final int trueLength = length == -1 ? raw.length-offset : length;
 
         if (cachePrints) {
             storeRawPrints(raw, printsFile);
         }
+
         if (offset == 0 && trueLength == raw.length) {
             return raw;
         }
@@ -105,7 +110,7 @@ public class PrintHandler {
     public long[] loadRawPrints(Path printsFile, int offset, int length) {
         if (length == -1) {
             try {
-                length = ((int)Files.size(printsFile))*4-offset;
+                length = ((int)Files.size(printsFile))/4-offset;
             } catch (IOException e) {
                 throw new RuntimeException("Unable to determine size of '" + printsFile + "'", e);
             }
@@ -142,12 +147,12 @@ public class PrintHandler {
         }
         final long[] prints = new long[bytes.length/4];
         for (int i = 0 ; i < prints.length ; i++) {
-            prints[i] = Integer.toUnsignedLong(Integer.reverseBytes(
-                    (bytes[i<<2]     << 24) +
-                    (bytes[(i<<2)+1] << 16) +
-                    (bytes[(i<<2)+2] << 8) +
-                    (bytes[(i<<2)+3])
-            ));
+            prints[i] = Integer.toUnsignedLong(
+                    ((bytes[(i<<2)+3] & 0xFF)    << 24) +
+                    ((bytes[(i<<2)+2] & 0xFF) << 16) +
+                    ((bytes[(i<<2)+1] & 0xFF) << 8) +
+                    ((bytes[i<<2] & 0xFF))
+            );
         }
         return prints;
     }
@@ -174,7 +179,7 @@ public class PrintHandler {
      */
     public long[] generatePrints(Path soundFile, int sampleOffset) {
         long startTime = System.currentTimeMillis();
-        log.info("Analysing '{}'", soundFile);
+        log.info("Analysing '{}' with sampleOffset={}", soundFile, sampleOffset);
         long[] raw;
         try {
             raw = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundFile.toString(), sampleOffset);
@@ -205,10 +210,10 @@ public class PrintHandler {
      * @param soundFile path to a sound file.
      * @return path to raw fingerprints for the sound file (might not exist (yet)).
      */
-    public Path getRawPrintsPath(Path soundFile) {
+    public Path getRawPrintsPath(Path soundFile, int sampleOffset) {
         if (soundFile.toString().endsWith("mp3") || soundFile.toString().endsWith("wav")) {
             final String base = soundFile.toString().replaceAll("[.][^.]*$", "");
-            return Path.of(base + ".rawPrints");
+            return Path.of(base + ".rawPrints" + (sampleOffset == 0 ? "" : "_" + sampleOffset));
         }
         return Path.of(soundFile + ".rawPrints");
     }
