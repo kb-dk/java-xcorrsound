@@ -38,8 +38,7 @@ public class CommandBuildIndex implements Callable<Integer> {
     
     @Override
     public Integer call() throws Exception {
-        FingerprintDBIndexer ismir = new FingerprintDBIndexer();
-        ismir.open(dbfile);
+        FingerprintDBIndexer ismir = new FingerprintDBIndexer(dbfile);
         if (listFile != null){
             //read list of input files
             List<String> mp3Files = Files.readAllLines(Path.of(listFile), StandardCharsets.UTF_8);

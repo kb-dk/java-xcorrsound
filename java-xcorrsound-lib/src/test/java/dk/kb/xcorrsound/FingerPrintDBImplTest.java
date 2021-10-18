@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.List;
 
@@ -26,11 +25,9 @@ class FingerPrintDBImplTest {
     
     @Test
     public void insert() throws IOException, UnsupportedAudioFileException, InterruptedException {
-        
-        FingerprintDBIndexer ismir = new FingerprintDBIndexer();
         File testDB = resetDB();
+        FingerprintDBIndexer ismir = new FingerprintDBIndexer(2048, 64, 5512, 32, DBFILE);
         
-        ismir.open(DBFILE);
         String mp3file = Thread.currentThread()
                                .getContextClassLoader()
                                .getResource("clip_P3_1400_1600_040806_001-java.mp3")
@@ -49,15 +46,14 @@ class FingerPrintDBImplTest {
     
     @Test
     public void query() throws UnsupportedAudioFileException, InterruptedException, IOException {
-        FingerprintDBSearcher ismir = new FingerprintDBSearcher();
-        ismir.open(DBFILE);
+        FingerprintDBSearcher ismir = new FingerprintDBSearcher(2048, 64, 5512, 32, DBFILE);
+        
         String mp3file = Thread.currentThread()
                                .getContextClassLoader()
                                .getResource("chunck1.mp3")
                                .getFile();
-        StringWriter resultWriter = new StringWriter();
+    
         List<IsmirSearchResult> results = ismir.query_scan(mp3file,
-                                                           null,
                                                            null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         
@@ -67,27 +63,24 @@ class FingerPrintDBImplTest {
                            allOf(
                                    hasProperty("dist", equalTo(363)),
                                    hasProperty("posInIndex", equalTo(20109)))));
-        //Matchers.containsString("at 00:03:53 with distance 363"));
-        //dist 79 if only using 16 bands
-        System.out.println(resultWriter);
     }
     
     @Test
     @Disabled
     public void queryLarge() throws UnsupportedAudioFileException, InterruptedException, IOException,
                                     URISyntaxException {
-        FingerprintDBSearcher ismir = new FingerprintDBSearcher();
         File indexFile = new File(Thread.currentThread()
                                         .getContextClassLoader()
                                         .getResource("drp3_2007-12-01.ismir.index")
                                         .toURI());
-        ismir.open(indexFile.getAbsolutePath());
+        FingerprintDBSearcher ismir = new FingerprintDBSearcher(2048, 64, 5512, 32, indexFile.getAbsolutePath());
+        
         File mp3file = new File(Thread.currentThread()
                                       .getContextClassLoader()
                                       .getResource("mceinar_chunk1.mp3")
                                       .toURI());
         List<IsmirSearchResult> results = ismir.query_scan(mp3file.getAbsolutePath(),
-                                                           null, null,
+                                                           null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         for (IsmirSearchResult result : results) {
             System.out.println(result.toString());

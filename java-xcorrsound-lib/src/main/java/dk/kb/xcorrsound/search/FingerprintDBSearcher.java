@@ -16,20 +16,24 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseable {
+public class FingerprintDBSearcher extends FingerPrintDB {
     
     public static final double DEFAULT_CRITERIA = 0.35 * (macro_sz * Integer.BYTES * 8);
     
     private static final Logger log = LoggerFactory.getLogger(FingerprintDBSearcher.class);
     
-    public FingerprintDBSearcher() {
+    public FingerprintDBSearcher(String indexFile) throws IOException {
+        super(indexFile);
     }
     
-    public FingerprintDBSearcher(int frameLength, int advance, int sampleRate, int bands) {
-        super(frameLength, advance, sampleRate, bands);
+    public FingerprintDBSearcher(int frameLength, int advance, int sampleRate, int bands, String indexFile)
+            throws IOException {
+        super(frameLength, advance, sampleRate, bands, indexFile);
     }
     
-    public List<IsmirSearchResult> query_scan(String queryFilename, Long offsetSeconds, Long durationSeconds, double criteria)
+    public List<IsmirSearchResult> query_scan(String queryFilename,
+                                              Long offsetSeconds,
+                                              double criteria)
             throws IOException, UnsupportedAudioFileException, InterruptedException {
         
         log.info("Starting query_scan for {}", queryFilename);
@@ -41,7 +45,12 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
         
         //a.getSamplesForChannel(0, samples);
         
-        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(queryFilename, offsetSeconds, durationSeconds);
+        long[] fingerprints = this.getFingerprintStrategy()
+                                  .getFingerprintsForFileForSearch(queryFilename,
+                                                          offsetSeconds);
+        if (fingerprints.length < macro_sz + fpSkip) {
+            //TODO Houston, we have a problem
+        }
         return query_scan(fingerprints, criteria);
     }
     
@@ -49,83 +58,82 @@ public class FingerprintDBSearcher extends FingerPrintDB implements AutoCloseabl
             throws IOException {
         int[] db = new int[1024 * 1024 + macro_sz];
         
-        this.openForSearching();
         
-        log.info("Starting search in {}", dbFilename);
-        int pos = 0;
-        int prevMatchPos = Integer.MAX_VALUE;
-        
-        List<IsmirSearchResult> result = new ArrayList<>();
-        
-        while (true) {
-            int bufferContentCount = readDBBlob(db);
-            //log.info("Reading next blob of {} bytes from db", read_bytes);
-            if (bufferContentCount <= 0) {
-                break;
-            }
+        try (DataInputStream dataInputStream = new DataInputStream(IOUtils.buffer(new FileInputStream(this.dbFilename)))) {
+            log.info("Starting search in {}", dbFilename);
+            int pos = 0;
+            int prevMatchPos = Integer.MAX_VALUE;
             
-            //i counts through the bufferContent.
-            //pos counts through the actual DB contents, so it is NOT reset in each loop
-            for (int i = 0; i < bufferContentCount; i += 8, pos += 8) {
-                
-                int sampleRate = this.getFingerprintStrategy().getSampleRate();
-                
-                //If we are to close to the previous match, just continue
-                if (pos - prevMatchPos < (sampleRate / 64)
-                    && prevMatchPos != Integer.MAX_VALUE) {
-                    continue;
+            List<IsmirSearchResult> result = new ArrayList<>();
+            
+            while (true) {
+                int bufferContentCount = readDBBlob(db, dataInputStream);
+                //log.info("Reading next blob of {} bytes from db", read_bytes);
+                if (bufferContentCount <= 0) {
+                    break;
                 }
                 
-                //Check for early termination
-                if (hammingEarlyTerminate(fingerprints,
-                                          db,
-                                          i).getKey()) {
-                    //log.debug("Stopping search at frame {} as noisy overlap ({})",i,dist);
-                    continue;
-                } else {
+                //i counts through the bufferContent.
+                //pos counts through the actual DB contents, so it is NOT reset in each loop
+                for (int i = 0; i < bufferContentCount; i += 8, pos += 8) {
                     
-                    log.trace("Found possible match at {}, examining further", i);
-                    Map.Entry<Integer, Integer> checkNearPosResult = checkNearPos(fingerprints,
-                                                                                  pos,
-                                                                                  db,
-                                                                                  i);
-                    i += nearRange;
-                    pos += nearRange;
+                    int sampleRate = this.getFingerprintStrategy().getSampleRate();
                     
-                    final Integer hitDist = checkNearPosResult.getKey();
-                    final Integer hitPos = checkNearPosResult.getValue();
-                    
-                    if (hitDist < criteria) {
-                        log.info("Found hit at offset {} with dist {}", hitPos, hitDist);
-                        prevMatchPos = hitPos;
-                        
-                        
-                        Pair<Integer, Integer> hitEntry = offsetsToFile.keySet()
-                                                                       .stream()
-                                                                       //Only those that END after this hit
-                                                                       .filter(pair -> pair.getRight() > hitPos
-                                                                                       && hitPos > pair.getLeft())
-                                                                       .findFirst()
-                                                                       .orElse(Pair.of(0, 0));
-                        
-                        String filenameResult = offsetsToFile.get(hitEntry);
-                        
-                        
-                        Integer hitFileStart = hitEntry.getLeft();
-                        
-                        IsmirSearchResult ismirSearchResult = new IsmirSearchResult(filenameResult,
-                                                                                    hitPos,
-                                                                                    hitDist,
-                                                                                    hitFileStart,
-                                                                                    this.getFingerprintStrategy());
-                        result.add(ismirSearchResult);
+                    //If we are to close to the previous match, just continue
+                    if (pos - prevMatchPos < (sampleRate / 64)
+                        && prevMatchPos != Integer.MAX_VALUE) {
+                        continue;
                     }
                     
+                    //Check for early termination
+                    if (hammingEarlyTerminate(fingerprints, db, i).getKey()) {
+                        //log.debug("Stopping search at frame {} as noisy overlap ({})",i,dist);
+                        continue;
+                    } else {
+                        
+                        log.trace("Found possible match at {}, examining further", i);
+                        Map.Entry<Integer, Integer> checkNearPosResult = checkNearPos(fingerprints,
+                                                                                      pos,
+                                                                                      db,
+                                                                                      i);
+                        i += nearRange;
+                        pos += nearRange;
+                        
+                        final Integer hitDist = checkNearPosResult.getKey();
+                        final Integer hitPos = checkNearPosResult.getValue();
+                        
+                        if (hitDist < criteria) {
+                            log.info("Found hit at offset {} with dist {}", hitPos, hitDist);
+                            prevMatchPos = hitPos;
+                            
+                            
+                            Pair<Integer, Integer> hitEntry = offsetsToFile.keySet()
+                                                                           .stream()
+                                                                           //Only those that END after this hit
+                                                                           .filter(pair -> pair.getRight() > hitPos
+                                                                                           && hitPos > pair.getLeft())
+                                                                           .findFirst()
+                                                                           .orElse(Pair.of(0, 0));
+                            
+                            String filenameResult = offsetsToFile.get(hitEntry);
+                            
+                            
+                            Integer hitFileStart = hitEntry.getLeft();
+                            
+                            IsmirSearchResult ismirSearchResult = new IsmirSearchResult(filenameResult,
+                                                                                        hitPos,
+                                                                                        hitDist,
+                                                                                        hitFileStart,
+                                                                                        this.getFingerprintStrategy());
+                            result.add(ismirSearchResult);
+                        }
+                        
+                    }
                 }
             }
+            log.info("Completed search in {}", dbFilename);
+            return result;
         }
-        log.info("Completed search in {}", dbFilename);
-        return result;
         
     }
     

@@ -21,7 +21,7 @@ public class WavConverter {
     protected static Path inlineConvertToWav(String filename,
                                              int frameRate,
                                              Long offsetSeconds,
-                                             Long durationSeconds)
+                                             Double durationSeconds)
             throws IOException {
         log.info("Converting '{}' is to {}hz WAV format", filename, frameRate);
         

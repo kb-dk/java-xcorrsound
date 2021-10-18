@@ -7,15 +7,17 @@ import org.slf4j.LoggerFactory;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.IOException;
 
-public class FingerprintDBIndexer extends FingerPrintDB implements AutoCloseable {
+public class FingerprintDBIndexer extends FingerPrintDB {
     
     private final Logger log = LoggerFactory.getLogger(this.getClass());
     
-    public FingerprintDBIndexer() {
+    public FingerprintDBIndexer(String indexFilename) throws IOException {
+        super(indexFilename);
     }
     
-    public FingerprintDBIndexer(int frameLength, int advance, int sampleRate, int bands) {
-        super(frameLength, advance, sampleRate, bands);
+    public FingerprintDBIndexer(int frameLength, int advance, int sampleRate, int bands, String indexFilename)
+            throws IOException {
+        super(frameLength, advance, sampleRate, bands, indexFilename);
     }
     
     public void insert(String filename, String indexedName)
@@ -29,7 +31,7 @@ public class FingerprintDBIndexer extends FingerPrintDB implements AutoCloseable
         
         //a.getSamplesForChannel(0, samples);
         log.debug("Generating fingerprints for '{}'", filename);
-        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(filename, null, null);
+        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFileForIndex(filename);
         
         log.debug("Generated {} fingerprints for '{}'", fingerprints.length, filename);
         

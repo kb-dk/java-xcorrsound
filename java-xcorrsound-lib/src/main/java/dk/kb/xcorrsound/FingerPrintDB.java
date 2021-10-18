@@ -11,8 +11,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -23,9 +21,9 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class FingerPrintDB implements AutoCloseable {
+public class FingerPrintDB  {
     
-    private Logger log = LoggerFactory.getLogger(this.getClass());
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
     public static final Integer macro_sz = 256;
     public static final Integer fpSkip = 50; // skip this much into fingerprint array.
     public static final Integer nearRange = 150; // how far to look around a position that
@@ -36,14 +34,15 @@ public class FingerPrintDB implements AutoCloseable {
     protected long dbFileLength;
     protected Map<Pair<Integer,Integer>, String> offsetsToFile = new TreeMap<>();
     
-    private DataInputStream fin;
     
     
-    public FingerPrintDB() {
-        this.fingerprintStrategy = new FingerprintStrategyIsmir(2048, 64, 5512, 32);
+    public FingerPrintDB(String dbFilename) throws IOException {
+        this(2048, 64, 5512, 32, dbFilename);
     }
-    public FingerPrintDB(int frameLength, int advance, int sampleRate, int bands) {
+    public FingerPrintDB(int frameLength, int advance, int sampleRate, int bands, String dbFilename)
+            throws IOException {
         this.fingerprintStrategy = new FingerprintStrategyIsmir(frameLength, advance, sampleRate, bands);
+        readMapFile(dbFilename);
     }
     
     public FingerprintStrategy getFingerprintStrategy() {
@@ -59,7 +58,10 @@ public class FingerPrintDB implements AutoCloseable {
     }
     
     
-    public void open(String filename) throws IOException {
+    private void readMapFile(String filename) throws IOException {
+        if (filename == null){
+            return;
+        }
         this.dbFilename = Path.of(filename).toAbsolutePath().toString();
         this.dbFileLength = new File(dbFilename).length();
         
@@ -123,13 +125,7 @@ public class FingerPrintDB implements AutoCloseable {
     }
     
     
-    public void openForSearching() throws FileNotFoundException {
-        if (fin == null) {
-            fin = new DataInputStream(IOUtils.buffer(new FileInputStream(this.dbFilename)));
-        }
-    }
-    
-    public int readDBBlob(int[] buffer) throws IOException {
+    public static int readDBBlob(int[] buffer, DataInputStream fin) throws IOException {
         //Fill the first 256 ints from the last 256 ints
         System.arraycopy(buffer, buffer.length - macro_sz,
                          buffer, 0, macro_sz);
@@ -148,10 +144,5 @@ public class FingerPrintDB implements AutoCloseable {
         return count;
     }
     
-    @Override
-    public void close() throws IOException {
-        if (fin != null) {
-            fin.close();
-        }
-    }
+  
 }
