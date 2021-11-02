@@ -19,7 +19,7 @@
         <dependency>
             <groupId>com.github.kokorin.jaffree</groupId>
             <artifactId>jaffree</artifactId>
-            <version>2021.05.31</version>
+            <version>2021.08.31</version>
         </dependency>
 
         <dependency>
@@ -45,7 +45,7 @@
             <!--Complex numbers for FFT-->
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.11</version>
+            <version>3.12.0</version>
         </dependency>
         <dependency>
             <!--FileUtils and IOUtils-->
@@ -59,7 +59,7 @@
             <!--Runtime logging. Allow the user of this library to choose the logging framework-->
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.30</version>
+            <version>1.7.32</version>
         </dependency>
 
 
@@ -73,8 +73,7 @@
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.5.2</version>
+            <artifactId>junit-jupiter-api</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -88,7 +87,7 @@
             <!--Use logback for logging in tests, but do not include it in runtime-->
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.3</version>
+            <version>1.2.6</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
