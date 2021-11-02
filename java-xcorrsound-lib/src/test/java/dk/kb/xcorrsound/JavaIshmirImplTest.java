@@ -27,13 +27,13 @@ public class JavaIshmirImplTest {
         //Generate a new fingerprint with java
         String soundChunk = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3").getFile();
         
-        int[] fingerPrintsForFile = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunk);
+        long[] fingerPrintsForFile = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunk);
         
         //Load fingerprint generated with C++ for same file;
         
         String fingerPrintOrgFile = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1_org.fingerprint").getFile();
         
-        int[] fingerPrintOrg = XCorrSoundFacade.readFingerPrintFromFile(fingerPrintOrgFile);
+        long[] fingerPrintOrg = XCorrSoundFacade.readFingerPrintFromFile(fingerPrintOrgFile);
         
         assertEquals(fingerPrintOrg.length,fingerPrintsForFile.length,"Finger print not matching, different file sizes");
         
@@ -44,7 +44,7 @@ public class JavaIshmirImplTest {
         String soundChunkWave = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3.wav").getFile();
         
         
-        int[] fingerPrintsForFileWave = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunkWave);
+        long[] fingerPrintsForFileWave = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunkWave);
         
         for (int i =0;i<fingerPrintOrg.length;i++) {
             assertEquals(fingerPrintOrg[i], fingerPrintsForFileWave[i]);

@@ -94,7 +94,7 @@ public class FingerPrintDB  {
     }
     
     protected void writeDBToDisk(String dbFilename,
-                                 int[] db,
+                                 long[] db,
                                  String indexedName) throws IOException {
         log.info("Writing index to disk");
         
