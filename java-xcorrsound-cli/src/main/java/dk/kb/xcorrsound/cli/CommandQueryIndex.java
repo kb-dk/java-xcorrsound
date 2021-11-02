@@ -46,7 +46,7 @@ public class CommandQueryIndex implements Callable<Integer> {
     public Integer call() throws Exception {
         //Default value if criteria not set
         criteria = Optional.ofNullable(criteria).orElse(FingerprintDBSearcher.DEFAULT_CRITERIA);
-        int[] fingerprints = new FingerprintDBSearcher(null).getFingerprintStrategy().getFingerprintsForFile(queryFile, null, null);
+        long[] fingerprints = new FingerprintDBSearcher(null).getFingerprintStrategy().getFingerprintsForFileForSearch(queryFile, null);
     
         ExecutorService threadPool = Executors.newFixedThreadPool(Math.min(dbfiles.size(),processes));
         List<Future<String>> results = new ArrayList<>();
@@ -63,7 +63,7 @@ public class CommandQueryIndex implements Callable<Integer> {
         return 0;
     }
     
-    private String singleSearchEx(String dbfile, int[] fingerprints) {
+    private String singleSearchEx(String dbfile, long[] fingerprints) {
         try {
             return singleSearch(dbfile, fingerprints);
         } catch (IOException | InterruptedException | UnsupportedAudioFileException e) {
@@ -71,15 +71,14 @@ public class CommandQueryIndex implements Callable<Integer> {
         }
     }
     
-    private String singleSearch(String dbfile, int[] fingerprints) throws IOException, UnsupportedAudioFileException, InterruptedException {
+    private String singleSearch(String dbfile, long[] fingerprints) throws IOException, UnsupportedAudioFileException, InterruptedException {
         FingerprintDBSearcher searcher = new FingerprintDBSearcher(dbfile);
-    
-            try (StringWriter resultWriter = new StringWriter()) {
-                List<IsmirSearchResult> result = searcher.query_scan(fingerprints, criteria);
-                result.forEach(singleResult -> resultWriter.write(singleResult.toString()));
-                return resultWriter.toString();
-            }
         
+        try (StringWriter resultWriter = new StringWriter()) {
+            List<IsmirSearchResult> result = searcher.query_scan(fingerprints, criteria);
+            result.forEach(singleResult -> resultWriter.write(singleResult.toString()));
+            return resultWriter.toString();
+        }
     }
     
     

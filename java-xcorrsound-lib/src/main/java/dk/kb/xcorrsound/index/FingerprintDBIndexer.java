@@ -31,7 +31,7 @@ public class FingerprintDBIndexer extends FingerPrintDB {
         
         //a.getSamplesForChannel(0, samples);
         log.debug("Generating fingerprints for '{}'", filename);
-        int[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(filename, null, null);
+        long[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFileForIndex(filename);
         
         log.debug("Generated {} fingerprints for '{}'", fingerprints.length, filename);
         

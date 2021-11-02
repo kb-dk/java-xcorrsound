@@ -16,7 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class FingerprintDBSearcher extends FingerPrintDB  {
+public class FingerprintDBSearcher extends FingerPrintDB {
     
     public static final double DEFAULT_CRITERIA = 0.35 * (macro_sz * Integer.BYTES * 8);
     
@@ -31,7 +31,9 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
         super(frameLength, advance, sampleRate, bands, indexFile);
     }
     
-    public List<IsmirSearchResult> query_scan(String queryFilename, Long offsetSeconds, Long durationSeconds, double criteria)
+    public List<IsmirSearchResult> query_scan(String queryFilename,
+                                              Long offsetSeconds,
+                                              double criteria)
             throws IOException, UnsupportedAudioFileException, InterruptedException {
         
         log.info("Starting query_scan for {}", queryFilename);
@@ -43,49 +45,52 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
         
         //a.getSamplesForChannel(0, samples);
         
-        int[] fingerprints = this.getFingerprintStrategy().getFingerprintsForFile(queryFilename, offsetSeconds, durationSeconds);
+        long[] fingerprints = this.getFingerprintStrategy()
+                                  .getFingerprintsForFileForSearch(queryFilename,
+                                                          offsetSeconds);
+        if (fingerprints.length < macro_sz + fpSkip) {
+            //TODO Houston, we have a problem
+        }
         return query_scan(fingerprints, criteria);
     }
     
-    public List<IsmirSearchResult> query_scan(int[] fingerprints, double criteria)
+    public List<IsmirSearchResult> query_scan(long[] fingerprints, double criteria)
             throws IOException {
         int[] db = new int[1024 * 1024 + macro_sz];
-    
-    
-        try (DataInputStream dataInputStream = new DataInputStream(IOUtils.buffer(new FileInputStream(this.dbFilename)))){
+        
+        
+        try (DataInputStream dataInputStream = new DataInputStream(IOUtils.buffer(new FileInputStream(this.dbFilename)))) {
             log.info("Starting search in {}", dbFilename);
             int pos = 0;
             int prevMatchPos = Integer.MAX_VALUE;
-    
+            
             List<IsmirSearchResult> result = new ArrayList<>();
-    
+            
             while (true) {
                 int bufferContentCount = readDBBlob(db, dataInputStream);
                 //log.info("Reading next blob of {} bytes from db", read_bytes);
                 if (bufferContentCount <= 0) {
                     break;
                 }
-        
+                
                 //i counts through the bufferContent.
                 //pos counts through the actual DB contents, so it is NOT reset in each loop
                 for (int i = 0; i < bufferContentCount; i += 8, pos += 8) {
-            
+                    
                     int sampleRate = this.getFingerprintStrategy().getSampleRate();
-            
+                    
                     //If we are to close to the previous match, just continue
                     if (pos - prevMatchPos < (sampleRate / 64)
                         && prevMatchPos != Integer.MAX_VALUE) {
                         continue;
                     }
-            
+                    
                     //Check for early termination
-                    if (hammingEarlyTerminate(fingerprints,
-                                              db,
-                                              i).getKey()) {
+                    if (hammingEarlyTerminate(fingerprints, db, i).getKey()) {
                         //log.debug("Stopping search at frame {} as noisy overlap ({})",i,dist);
                         continue;
                     } else {
-                
+                        
                         log.trace("Found possible match at {}, examining further", i);
                         Map.Entry<Integer, Integer> checkNearPosResult = checkNearPos(fingerprints,
                                                                                       pos,
@@ -93,15 +98,15 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
                                                                                       i);
                         i += nearRange;
                         pos += nearRange;
-                
+                        
                         final Integer hitDist = checkNearPosResult.getKey();
                         final Integer hitPos = checkNearPosResult.getValue();
-                
+                        
                         if (hitDist < criteria) {
                             log.info("Found hit at offset {} with dist {}", hitPos, hitDist);
                             prevMatchPos = hitPos;
-                    
-                    
+                            
+                            
                             Pair<Integer, Integer> hitEntry = offsetsToFile.keySet()
                                                                            .stream()
                                                                            //Only those that END after this hit
@@ -109,12 +114,12 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
                                                                                            && hitPos > pair.getLeft())
                                                                            .findFirst()
                                                                            .orElse(Pair.of(0, 0));
-                    
+                            
                             String filenameResult = offsetsToFile.get(hitEntry);
-                    
-                    
+                            
+                            
                             Integer hitFileStart = hitEntry.getLeft();
-                    
+                            
                             IsmirSearchResult ismirSearchResult = new IsmirSearchResult(filenameResult,
                                                                                         hitPos,
                                                                                         hitDist,
@@ -122,7 +127,7 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
                                                                                         this.getFingerprintStrategy());
                             result.add(ismirSearchResult);
                         }
-                
+                        
                     }
                 }
             }
@@ -138,7 +143,7 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
     // and we must have a decent baseline, i.e. at least 10% through computation.
     // this is a heuristic to terminate early if we can see
     // there will not be a match here.
-    private static Map.Entry<Boolean, Integer> hammingEarlyTerminate(int[] fingerprints, int[] db, int start) {
+    private static Map.Entry<Boolean, Integer> hammingEarlyTerminate(long[] fingerprints, int[] db, int start) {
         
         int dist = 0;
         for (int i = 0; i < macro_sz; ++i) {
@@ -158,7 +163,7 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
     
     
     // checks +/- 150 around posInIndex.
-    private Map.Entry<Integer, Integer> checkNearPos(int[] fingerprints,
+    private Map.Entry<Integer, Integer> checkNearPos(long[] fingerprints,
                                                      int posInIndex,
                                                      int[] db,
                                                      int posInDb)
@@ -201,7 +206,7 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
         
     }
     
-    private static Map.Entry<Integer, Integer> fullCheck(int[] fingerprints, int[] window) {
+    private static Map.Entry<Integer, Integer> fullCheck(long[] fingerprints, int[] window) {
         
         int bestDist = Integer.MAX_VALUE;
         int bestIdx = Integer.MAX_VALUE;
@@ -218,7 +223,7 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
         return Map.entry(bestDist, bestIdx);
     }
     
-    private static int fullHamming(int[] fingerprints, int[] db, int start) {
+    private static int fullHamming(long[] fingerprints, int[] db, int start) {
         
         int dist = 0;
         for (int i = 0; i < macro_sz; ++i) {
@@ -229,8 +234,9 @@ public class FingerprintDBSearcher extends FingerPrintDB  {
     }
     
     
-    private static int matchFingerprints(int inputFingerprint, int archiveFinterprint) {
-        long matchingBits = Integer.toUnsignedLong(inputFingerprint) ^ Integer.toUnsignedLong(archiveFinterprint); //XOR
+    private static int matchFingerprints(long inputFingerprint, int archiveFinterprint) {
+        long archiveFingerprint = Integer.toUnsignedLong(archiveFinterprint);
+        long matchingBits = inputFingerprint ^ archiveFingerprint; //XOR
         return Long.bitCount(matchingBits);
     }
     

@@ -16,12 +16,18 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.IntBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+
+import static dk.kb.xcorrsound.FingerPrintDB.fpSkip;
+import static dk.kb.xcorrsound.FingerPrintDB.macro_sz;
 
 public class FingerprintStrategyIsmir implements FingerprintStrategy {
     
@@ -43,12 +49,14 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     }
     
     
-    protected static int[] generateFingerprintStream(final short[] input,
+    protected static long[] generateFingerprintStream(final short[] input,
                                                       final int frameLength,
                                                       final int sampleRate,
                                                       final int advance,
-                                                      final int bands) {
+                                                      final int bands,
+                                                      Integer maxFingerprints) {
         log.debug("Generating fingerprint for input of length {}", input.length);
+        
         
         //TODO These values are static so calculate them somewhere earlier instead of here
         double[] hanningWindow = getHanningWindow(frameLength);
@@ -57,13 +65,16 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         assert logScale.length == bands + 1;
         double[] prevEnergy = new double[logScale.length];
         
-        List<Integer> output = new ArrayList<>();
+        List<Long> output = new ArrayList<>();
         
         int frameEnd = frameLength;
         for (int frameStart = 0;
              frameEnd < input.length;
              frameStart += advance, frameEnd += advance) {
-            
+            if (maxFingerprints != null && output.size() == maxFingerprints) {
+                //No need to generate any more
+                break;
+            }
             
             short[] frame = Arrays.copyOfRange(input, frameStart, frameStart + frameLength);
             
@@ -77,13 +88,14 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
             
             double[] energy = computeEnergyInBands(logScale, fourierTransformOfFrame);
             
-            int fingerprint = getFingerprint(prevEnergy, energy);
+            Long fingerprint = getFingerprint(prevEnergy, energy);
             //log.info("Frame at {} have fingerprint {}", frameStart, fingerprint);
             prevEnergy = energy;
             
             output.add(fingerprint);
         }
-        final Integer[] array = output.toArray(new Integer[0]);
+        final Long[] array = output.toArray(new Long[0]);
+        log.debug("Generated fingerprint (of length {}) for input of length {}", array.length, input.length);
         return ArrayUtils.toPrimitive(array);
     }
     
@@ -184,15 +196,15 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         return output;
     }
     
-    private static int getFingerprint(double[] prevEnergy, double[] energy) {
+    private static long getFingerprint(double[] prevEnergy, double[] energy) {
         
-        int fingerprint = 0;
+        long fingerprint = 0;
         
         for (int bitPos = 0; bitPos < energy.length - 1; ++bitPos) {
             double val = (energy[bitPos] - energy[bitPos + 1])
                          - (prevEnergy[bitPos] - prevEnergy[bitPos + 1]);
             
-            int bit = (val > 0) ? 1 : 0;
+            long bit = (val > 0) ? 1 : 0;
             
             fingerprint = fingerprint + (bit << bitPos);
             
@@ -211,8 +223,27 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         return advance;
     }
     
-    public int[] getFingerprintsForFile(String filename, Long offsetSeconds, Long lengthSeconds)
+    public long[] getFingerprintsForFileForIndex(String filename)
             throws IOException, UnsupportedAudioFileException {
+        return getFingerprintsForFile(filename, null, null);
+    }
+    
+    public long[] getFingerprintsForFileForSearch(String filename,
+                                         Long offsetSeconds)
+            throws IOException, UnsupportedAudioFileException {
+        final int maxFingerprints = macro_sz + fpSkip;
+        final double lengthSeconds = (0.0 + frameLength + advance * maxFingerprints) / sampleRate;
+        return getFingerprintsForFile(filename,
+                                      offsetSeconds,
+                                      lengthSeconds);
+        
+    }
+    
+    public long[] getFingerprintsForFile(String filename,
+                                         Long offsetSeconds,
+                                         Double lengthSeconds)
+            throws IOException, UnsupportedAudioFileException {
+        
         
         // if filename is not wav file, start by converting to 5512hz stereo wav file
         // if filename is on stdin, assume it conforms to assumption above.
@@ -233,8 +264,8 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
             if (isAcceptableFormat(inputFile)) {
                 try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(inputFile)) {
                     samples = readSamples(inputFile.getName(),
-                                          null,
-                                          null,
+                                          offsetSeconds,
+                                          lengthSeconds,
                                           audioInputStream);
                 }
             } else {
@@ -242,8 +273,8 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
                 if (tmpWavFile != null) {
                     try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(tmpWavFile.toFile())) {
                         samples = readSamples(tmpWavFile.toAbsolutePath().toString(),
-                                              null,
-                                              null,
+                                              offsetSeconds,
+                                              lengthSeconds,
                                               audioInputStream);
                     } finally {
                         Files.deleteIfExists(tmpWavFile);
@@ -255,8 +286,30 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
         if (samples == null) {
             return null;
         }
-        
-        int[] fingerprintStream = generateFingerprintStream(samples, frameLength, sampleRate, advance, bands);
+        final int minimumAcceptedNumberOfSamples = frameLength + advance * (macro_sz + fpSkip);
+        Integer maxFingerprints = null;
+        if (lengthSeconds != null) {
+            maxFingerprints = (int) ((lengthSeconds * sampleRate - frameLength) / advance);
+            NumberFormat formatter = new DecimalFormat("#0.00", DecimalFormatSymbols.getInstance(Locale.getDefault()));
+    
+            if (samples.length < minimumAcceptedNumberOfSamples) {
+                final double actualLength = lengthSeconds * samples.length / minimumAcceptedNumberOfSamples;
+                throw new IllegalArgumentException("Input file is only "
+                                                   + formatter.format(actualLength)
+                                                   + " seconds. Must be at least "
+                                                   + formatter.format(lengthSeconds)
+                                                   + " seconds");
+            }
+        }
+        long[] fingerprintStream = generateFingerprintStream(samples,
+                                                             frameLength,
+                                                             sampleRate,
+                                                             advance,
+                                                             bands,
+                                                             maxFingerprints);
+        if (maxFingerprints != null && fingerprintStream.length < maxFingerprints) {
+            return null;//TODO better fail here
+        }
         return fingerprintStream;
     }
     
@@ -272,7 +325,7 @@ public class FingerprintStrategyIsmir implements FingerprintStrategy {
     
     private short[] readSamples(String sourceFileName,
                                 Long offsetSeconds,
-                                Long durationSeconds,
+                                Double durationSeconds,
                                 AudioInputStream audioInputStream)
             throws IOException {
         AudioFormat format = audioInputStream.getFormat();

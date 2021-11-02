@@ -56,7 +56,6 @@ class FingerPrintDBImplTest {
     
         List<IsmirSearchResult> results = ismir.query_scan(mp3file,
                                                            null,
-                                                           null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         
         
@@ -82,7 +81,7 @@ class FingerPrintDBImplTest {
                                       .getResource("mceinar_chunk1.mp3")
                                       .toURI());
         List<IsmirSearchResult> results = ismir.query_scan(mp3file.getAbsolutePath(),
-                                                           null, null,
+                                                           null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         
         for (IsmirSearchResult result : results) {

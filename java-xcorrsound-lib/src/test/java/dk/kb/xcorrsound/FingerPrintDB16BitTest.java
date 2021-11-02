@@ -26,17 +26,15 @@ class FingerPrintDB16BitTest {
     
     @Test
     public void insert() throws IOException, UnsupportedAudioFileException, InterruptedException {
-    
+        
         File testDB = resetDB();
         FingerprintDBIndexer ismir = new FingerprintDBIndexer(2048, 64, 5512, 16, DBFILE);
-    
-            String mp3file = Thread.currentThread()
-                                   .getContextClassLoader()
-                                   .getResource("clip_P3_1400_1600_040806_001-java.mp3")
-                                   .getFile();
-            ismir.insert(mp3file, "testFile");
-    
         
+        String mp3file = Thread.currentThread()
+                               .getContextClassLoader()
+                               .getResource("clip_P3_1400_1600_040806_001-java.mp3")
+                               .getFile();
+        ismir.insert(mp3file, "testFile");
     }
     
     private File resetDB() throws IOException {
@@ -51,16 +49,16 @@ class FingerPrintDB16BitTest {
     public void query() throws UnsupportedAudioFileException, InterruptedException, IOException {
         FingerprintDBSearcher ismir = new FingerprintDBSearcher(2048, 64, 5512, 16, DBFILE);
         
-            String mp3file = Thread.currentThread()
-                                   .getContextClassLoader()
-                                   .getResource("chunck1.mp3")
-                                   .getFile();
+        String mp3file = Thread.currentThread()
+                               .getContextClassLoader()
+                               .getResource("chunck1.mp3")
+                               .getFile();
     
         List<IsmirSearchResult> results = ismir.query_scan(mp3file,
-                                                           null, null,
+                                                           null,
                                                            FingerprintDBSearcher.DEFAULT_CRITERIA);
         
-    
+        
         assertThat(results,
                    hasItem(
                            allOf(

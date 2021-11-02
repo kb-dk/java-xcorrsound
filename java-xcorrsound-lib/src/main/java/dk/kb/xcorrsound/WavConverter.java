@@ -21,7 +21,7 @@ public class WavConverter {
     protected static Path inlineConvertToWav(String filename,
                                              int frameRate,
                                              Long offsetSeconds,
-                                             Long durationSeconds)
+                                             Double durationSeconds)
             throws IOException {
         log.info("Converting '{}' is to {}hz WAV format", filename, frameRate);
         
@@ -42,7 +42,8 @@ public class WavConverter {
                        .setOverwriteOutput(true)
                        .addArguments("-ar", frameRate + "");
         if (durationSeconds != null) {
-            fFmpeg.addArguments("-t", durationSeconds.toString());
+            int durationWholeSeconds = Double.valueOf(Math.ceil(durationSeconds)).intValue();
+            fFmpeg.addArguments("-t", ""+durationWholeSeconds);
         }
         fFmpeg.addOutput(UrlOutput.toUrl(tmpWaveFile.toString()));
         

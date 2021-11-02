@@ -39,15 +39,15 @@ public class CommandBuildIndex implements Callable<Integer> {
     @Override
     public Integer call() throws Exception {
         FingerprintDBIndexer ismir = new FingerprintDBIndexer(dbfile);
-        if (listFile != null) {
+        if (listFile != null){
             //read list of input files
             List<String> mp3Files = Files.readAllLines(Path.of(listFile), StandardCharsets.UTF_8);
             for (String mp3File : mp3Files) {
                 ismir.insert(mp3File, mp3File);
             }
-        } else if (input != null) {
-            if (input.trim().equals("-")) {
-                if (name == null) {
+        } else if (input != null){
+            if (input.trim().equals("-")){
+                if (name == null){
                     //error
                     throw new IllegalArgumentException("If input is -, you must specify a name");
                 }
@@ -62,5 +62,4 @@ public class CommandBuildIndex implements Callable<Integer> {
         }
         return 0;
     }
-    
 }
