@@ -5,18 +5,18 @@
     <parent>
         <groupId>dk.kb.xcorrsound</groupId>
         <artifactId>java-xcorrsound</artifactId>
-        <version>0.1</version>
+        <version>0.2-SNAPSHOT</version>
     </parent>
 
     <groupId>dk.kb.xcorrsound</groupId>
     <artifactId>java-xcorrsound-cli</artifactId>
-    <version>0.1</version>
+    <version>0.2-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
             <groupId>dk.kb.xcorrsound</groupId>
             <artifactId>java-xcorrsound-lib</artifactId>
-            <version>0.1</version>
+            <version>0.2-SNAPSHOT</version>
         </dependency>
 
         <dependency>

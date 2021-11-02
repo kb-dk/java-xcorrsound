@@ -12,7 +12,7 @@
 
     <groupId>dk.kb.xcorrsound</groupId>
     <artifactId>java-xcorrsound</artifactId>
-    <version>0.1</version>
+    <version>0.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -24,7 +24,7 @@
         <connection>scm:git:ssh://git@sbprojects.statsbiblioteket.dk:7999/xcor/java-xcorrsound.git</connection>
         <developerConnection>scm:git:ssh://git@sbprojects.statsbiblioteket.dk:7999/xcor/java-xcorrsound.git
         </developerConnection>
-        <tag>java-xcorrsound-0.1</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <repositories>
