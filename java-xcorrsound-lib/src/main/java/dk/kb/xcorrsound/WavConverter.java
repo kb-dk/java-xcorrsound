@@ -42,7 +42,8 @@ public class WavConverter {
                        .setOverwriteOutput(true)
                        .addArguments("-ar", frameRate + "");
         if (durationSeconds != null) {
-            fFmpeg.addArguments("-t", durationSeconds.toString());
+            int durationWholeSeconds = Double.valueOf(Math.ceil(durationSeconds)).intValue();
+            fFmpeg.addArguments("-t", ""+durationWholeSeconds);
         }
         fFmpeg.addOutput(UrlOutput.toUrl(tmpWaveFile.toString()));
         
