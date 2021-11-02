@@ -4,10 +4,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.sbforge</groupId>
-        <artifactId>sbforge-parent</artifactId>
-        <version>22</version>
+        <groupId>dk.statsbiblioteket.sbprojects</groupId>
+        <artifactId>sbprojects-parent</artifactId>
+        <version>34</version>
+        <relativePath/><!-- override default parentpath of ../pom.xml-->
     </parent>
+
 
     <groupId>dk.kb.xcorrsound</groupId>
     <artifactId>java-xcorrsound</artifactId>
@@ -19,9 +21,9 @@
         <module>java-xcorrsound-cli</module>
     </modules>
     <scm>
-        <url>https://sbprojects.statsbiblioteket.dk/stash/projects/ARK/repos/stand-alone-java-template/browse</url>
-        <connection>scm:git:ssh://git@sbprojects.statsbiblioteket.dk:7999/ark/stand-alone-java-template.git</connection>
-        <developerConnection>scm:git:ssh://git@sbprojects.statsbiblioteket.dk:7999/ark/stand-alone-java-template.git
+        <url>https://sbprojects.statsbiblioteket.dk/stash/projects/XCOR/repos/java-xcorrsound/browse</url>
+        <connection>scm:git:ssh://git@sbprojects.statsbiblioteket.dk:7999/xcor/java-xcorrsound.git</connection>
+        <developerConnection>scm:git:ssh://git@sbprojects.statsbiblioteket.dk:7999/xcor/java-xcorrsound.git
         </developerConnection>
         <tag>HEAD</tag>
     </scm>
