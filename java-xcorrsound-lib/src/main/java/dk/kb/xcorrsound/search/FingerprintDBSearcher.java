@@ -111,7 +111,7 @@ public class FingerprintDBSearcher extends FingerPrintDB {
                                                                            .stream()
                                                                            //Only those that END after this hit
                                                                            .filter(pair -> pair.getRight() > hitPos
-                                                                                           && hitPos > pair.getLeft())
+                                                                                           && hitPos >= pair.getLeft())
                                                                            .findFirst()
                                                                            .orElse(Pair.of(0, 0));
                             
