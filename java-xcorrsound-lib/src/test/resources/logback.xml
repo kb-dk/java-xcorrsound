@@ -15,7 +15,7 @@
 
 
     <!--Log our own things in debug until we know that everything works-->
-<!--    <logger name="dk.kb" level="DEBUG"/>-->
+    <logger name="dk.kb" level="DEBUG"/>
 
     <logger name="com.github.kokorin.jaffree" level="WARN"/>
 

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import dk.kb.facade.XCorrSoundFacade;
 
+import java.io.File;
 
 
 /*
@@ -25,14 +26,15 @@ public class JavaIshmirImplTest {
     void testIdenticalFingerPrint() throws Exception {
         
         //Generate a new fingerprint with java
-        String soundChunk = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3").getFile();
+        String soundChunk = new File(Thread.currentThread().getContextClassLoader().getResource("Monk Turner + Fascinoma - It's Your Birthday!.mp3").toURI()).getAbsolutePath();
         
         long[] fingerPrintsForFile = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunk);
         
         //Load fingerprint generated with C++ for same file;
-        
-        String fingerPrintOrgFile = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1_org.fingerprint").getFile();
-        
+    
+        String fingerPrintOrgFile = new File(Thread.currentThread().getContextClassLoader().getResource("Monk Turner + Fascinoma - It's Your Birthday!.mp3.fingerprint").toURI()).getAbsolutePath();
+    
+    
         long[] fingerPrintOrg = XCorrSoundFacade.readFingerPrintFromFile(fingerPrintOrgFile);
         
         assertEquals(fingerPrintOrg.length,fingerPrintsForFile.length,"Finger print not matching, different file sizes");
@@ -41,8 +43,7 @@ public class JavaIshmirImplTest {
             assertEquals(fingerPrintOrg[i], fingerPrintsForFile[i]);
         }
         //Test with wave-file. (no ffmpeg conversion)
-        String soundChunkWave = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3.wav").getFile();
-        
+        String soundChunkWave = new File(Thread.currentThread().getContextClassLoader().getResource("Monk Turner + Fascinoma - It's Your Birthday!.mp3.wav").toURI()).getAbsolutePath();
         
         long[] fingerPrintsForFileWave = XCorrSoundFacade.generateFingerPrintFromSoundFile(soundChunkWave);
         
@@ -54,9 +55,10 @@ public class JavaIshmirImplTest {
 
     @Test
     void FingerPrintPerformanceTest() throws Exception {
-        
-        String soundChunkWave = Thread.currentThread().getContextClassLoader().getResource("last_xmas_chunk1.mp3.wav").getFile();
-        
+    
+        String soundChunkWave = new File(Thread.currentThread().getContextClassLoader().getResource("Monk Turner + Fascinoma - It's Your Birthday!.mp3.wav").toURI()).getAbsolutePath();
+    
+    
         int maxRuns=100;
         long start=System.currentTimeMillis();
         for (int i =0;i<maxRuns;i++) {

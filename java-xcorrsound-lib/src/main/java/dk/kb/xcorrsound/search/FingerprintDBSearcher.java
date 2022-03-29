@@ -18,7 +18,7 @@ import java.util.Map;
 
 public class FingerprintDBSearcher extends FingerPrintDB {
     
-    public static final double DEFAULT_CRITERIA = 0.35 * (macro_sz * Integer.BYTES * 8);
+    public static final double DEFAULT_CRITERIA = 0.35 * (macro_sz * Integer.BYTES * 8); //This  seems dependent on the number of bands....
     
     private static final Logger log = LoggerFactory.getLogger(FingerprintDBSearcher.class);
     

@@ -113,7 +113,7 @@ public class FingerPrintDB  {
             
             for (int i = 0, dbLength = db.length; i < dbLength; i++) {
                 long j = db[i];
-                log.debug("db[{}]={}", i, j);
+                log.trace("db[{}]={}", i, j);
                 //Written as LittleEndian
                 of.writeInt(Integer.reverseBytes((int) j));
             }
