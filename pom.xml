@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>dk.statsbiblioteket.sbprojects</groupId>
-        <artifactId>sbprojects-parent</artifactId>
-        <version>34</version>
-        <relativePath /><!-- override default parentpath of ../pom.xml-->
+        <groupId>org.sbforge</groupId>
+        <artifactId>sbforge-parent</artifactId>
+        <version>22</version>
+        <relativePath />
     </parent>
 
 
