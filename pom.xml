@@ -15,6 +15,13 @@
     <version>0.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
+    <licenses>
+        <license>
+            <name>APACHE LICENSE, VERSION 2.0</name>
+            <url>https://apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
     <modules>
         <module>java-xcorrsound-lib</module>
         <module>java-xcorrsound-cli</module>
