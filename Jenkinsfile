@@ -8,7 +8,7 @@ openshift.withCluster() { // Use "default" cluster or fallback to OpenShift clus
 
     //Create template with maven settings.xml, so we have credentials for nexus
     podTemplate(
-            inheritFrom: 'kb-jenkins-agent-java-11',
+            inheritFrom: 'kb-jenkins-agent-java',
             cloud: 'openshift', //cloud must be openshift
             label: 'agent-with-settings.xml',
             name: 'agent-with-settings.xml',
